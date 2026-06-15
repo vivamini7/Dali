@@ -7,10 +7,14 @@ import SettingsPage from './pages/SettingsPage'
 import PrivacyPage  from './pages/PrivacyPage'
 import TermsPage    from './pages/TermsPage'
 import {
+  applySessionFromAuthUrl,
   authRedirectUrl,
   isSupabaseConfigured,
   supabase,
 } from './lib/supabase'
+import { Capacitor } from '@capacitor/core'
+import { App as CapacitorApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7860'
 const GUEST_ID_KEY = 'dalibaba_guest_id'
@@ -211,7 +215,39 @@ export default function App() {
       }
     })
 
-    return () => listener.subscription.unsubscribe()
+    let appUrlListener
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
+        try {
+          const session = await applySessionFromAuthUrl(url)
+          await Browser.close().catch(() => {})
+          if (session?.access_token) {
+            await exchangeSupabaseSession(session.access_token, true)
+          }
+        } catch (error) {
+          setAuthError(error.message || '로그인 정보를 앱에 적용하지 못했습니다.')
+        }
+      }).then(handle => {
+        appUrlListener = handle
+      })
+
+      CapacitorApp.getLaunchUrl().then(async launch => {
+        if (!launch?.url) return
+        try {
+          const session = await applySessionFromAuthUrl(launch.url)
+          if (session?.access_token) {
+            await exchangeSupabaseSession(session.access_token, true)
+          }
+        } catch (error) {
+          setAuthError(error.message || '로그인 정보를 앱에 적용하지 못했습니다.')
+        }
+      })
+    }
+
+    return () => {
+      listener.subscription.unsubscribe()
+      appUrlListener?.remove()
+    }
   }, [exchangeSupabaseSession])
 
   const submitAuth = useCallback(async (mode, email, password, remember = true) => {
@@ -307,11 +343,19 @@ export default function App() {
       if (provider === 'naver') {
         throw new Error('네이버 로그인은 Naver Developers 앱 키 발급 후 별도로 연결됩니다.')
       }
-      const { error } = await supabase.auth.signInWithOAuth({
+      const native = Capacitor.isNativePlatform()
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: authRedirectUrl() },
+        options: {
+          redirectTo: authRedirectUrl(),
+          skipBrowserRedirect: native,
+        },
       })
       if (error) throw error
+      if (native) {
+        if (!data.url) throw new Error('로그인 주소를 만들지 못했습니다.')
+        await Browser.open({ url: data.url })
+      }
     } catch (error) {
       setAuthError(error.message || '소셜 로그인을 시작하지 못했습니다.')
     }
