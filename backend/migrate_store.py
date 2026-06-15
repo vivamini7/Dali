@@ -21,6 +21,8 @@ def main() -> None:
     store = json.loads(STORE_PATH.read_text(encoding="utf-8"))
     for key in ("users", "sessions", "usage"):
         store.setdefault(key, {})
+    store.setdefault("imageUsage", {})
+    store.setdefault("imageTranslationUsage", {})
     store.setdefault("clientErrors", [])
 
     with psycopg.connect(DATABASE_URL) as conn:
@@ -36,6 +38,15 @@ def main() -> None:
             {},
             {"users": {}, "sessions": {}, "usage": {}},
             {"users": {}, "sessions": {}, "usage": {}, "clientErrors": []},
+            {"users": {}, "sessions": {}, "usage": {}, "imageUsage": {}, "clientErrors": []},
+            {
+                "users": {},
+                "sessions": {},
+                "usage": {},
+                "imageUsage": {},
+                "imageTranslationUsage": {},
+                "clientErrors": [],
+            },
         )
         if existing and existing[0] not in empty_stores:
             raise SystemExit(

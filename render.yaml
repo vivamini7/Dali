@@ -21,6 +21,12 @@ services:
         sync: false
       - key: ADMIN_TOKEN
         generateValue: true
+      - key: GUEST_DAILY_IMAGE_LIMIT
+        value: "5"
+      - key: FREE_DAILY_IMAGE_LIMIT
+        value: "10"
+      - key: PAID_DAILY_IMAGE_LIMIT
+        value: "100"
       - key: APPLE_SHARED_SECRET
         sync: false
       - key: GOOGLE_PACKAGE_NAME

@@ -11,6 +11,18 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7860'
 const GUEST_ID_KEY = 'dalibaba_guest_id'
 const AUTH_TOKEN_KEY = 'dalibaba_auth_token'
 
+async function getApiError(response, fallback) {
+  try {
+    const body = await response.json()
+    const detail = body?.detail
+    if (typeof detail === 'string') return detail
+    if (detail?.message) return detail.message
+  } catch {
+    // Use the user-facing fallback below.
+  }
+  return fallback
+}
+
 /* ── 이미지 압축 ── */
 async function compressImage(file) {
   return new Promise(resolve => {
@@ -220,15 +232,19 @@ export default function App() {
       setAnalyzing(true)
 
       const body    = JSON.stringify({ image_base64: compressed.base64, image_type: compressed.type })
-      const headers = { 'Content-Type': 'application/json' }
+      const headers = { ...authHeaders(), 'Content-Type': 'application/json' }
 
       console.log('[Dalibaba] /analyze 호출 시작...')
       const res  = await fetch(`${API_URL}/analyze`, { method: 'POST', headers, body, signal: controller.signal })
       console.log('[Dalibaba] /analyze 응답:', res.status)
-      let data = res.ok ? await res.json() : null
+      if (!res.ok) {
+        const fallback = res.status === 429
+          ? 'AI 분석 요청이 많습니다. 잠시 후 다시 시도해주세요.'
+          : '이미지 분석에 실패했습니다. 잠시 후 다시 시도해주세요.'
+        throw new Error(await getApiError(res, fallback))
+      }
+      let data = await res.json()
       console.log('[Dalibaba] 분석 결과:', data)
-
-      if (!data) setAnalyzeError('분석에 실패했습니다.\n메뉴판이 잘 보이도록 다시 찍어주세요.')
 
       if (data?.documentType === 'other') {
         try {
@@ -238,7 +254,13 @@ export default function App() {
             body,
             signal: controller.signal,
           })
-          const translatedData = translatedRes.ok ? await translatedRes.json() : null
+          if (!translatedRes.ok) {
+            throw new Error(await getApiError(
+              translatedRes,
+              '번역 서비스가 일시적으로 혼잡해 텍스트 번역만 표시합니다.',
+            ))
+          }
+          const translatedData = await translatedRes.json()
           data = {
             ...data,
             translatedImage: translatedData?.translated_image || null,
@@ -293,7 +315,7 @@ export default function App() {
       clearTimeout(timer)
       setAnalyzing(false)
     }
-  }, [priceResult])
+  }, [priceResult, authHeaders])
 
   /* ── 탭 전환 ── */
   /* ── 카메라 화면으로 ── */

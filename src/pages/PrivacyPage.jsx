@@ -10,7 +10,7 @@ export default function PrivacyPage({ onBack }) {
 
       <div className="settings-card legal-page" style={{ marginTop: 10 }}>
         <h2>개인정보 처리방침</h2>
-        <p>시행일: 2026년 6월 10일</p>
+        <p>시행일: 2026년 6월 15일</p>
 
         <h3>1. 수집하는 개인정보 항목</h3>
         <p>
@@ -20,7 +20,13 @@ export default function PrivacyPage({ onBack }) {
 
         <h3>2. 이미지 처리</h3>
         <p>
-          사용자가 업로드하는 메뉴판·영수증·사진은 AI 분석을 위해 서버로 전송되며, 분석 완료 후 서버에 저장하지 않고 즉시 폐기됩니다.
+          사용자가 업로드하는 메뉴판·영수증·사진은 분석을 위해 암호화된 통신으로 서버에 전송됩니다.
+          서비스 서버는 분석 이미지를 파일이나 데이터베이스에 저장하지 않으며, 요청 처리가 끝나면 메모리에서 폐기합니다.
+          이미지와 이미지에서 추출된 텍스트는 분석을 위해 Groq 및 DeepL API로 일시 전송될 수 있습니다.
+        </p>
+        <p>
+          여권, 신분증, 카드번호, 의료정보, 얼굴 사진 등 민감한 개인정보가 포함된 이미지는 업로드하지 마세요.
+          서비스 제공업체의 데이터 처리 및 보존 정책은 각 업체의 약관과 개인정보 정책이 적용될 수 있습니다.
         </p>
 
         <h3>3. 개인정보 이용 목적</h3>
@@ -28,6 +34,7 @@ export default function PrivacyPage({ onBack }) {
           <li>회원 식별 및 로그인 유지</li>
           <li>이용권·구독 상태 관리</li>
           <li>AI 질문 일일 사용량 관리</li>
+          <li>이미지 분석 일일 사용량 및 부정 이용 방지</li>
           <li>서비스 품질 개선 및 오류 대응</li>
         </ul>
 
@@ -38,10 +45,14 @@ export default function PrivacyPage({ onBack }) {
         </p>
 
         <h3>5. 제3자 제공 및 처리 위탁</h3>
-        <p>
-          이미지 분석을 위해 Groq, 번역을 위해 DeepL, 환율 정보를 위해 open.er-api.com에 이미지·텍스트 데이터가 일시적으로 전송될 수 있습니다.
-          각 서비스는 자체 정책에 따라 데이터를 처리하며, Dalibaba는 분석 목적 외 용도로 데이터를 제공하지 않습니다.
-        </p>
+        <ul>
+          <li>Groq: 이미지 인식, 메뉴·영수증 분석, AI 질의응답</li>
+          <li>DeepL: 이미지에서 추출한 텍스트의 한국어 번역</li>
+          <li>Supabase: 회원, 세션, 이용권 및 사용량 데이터 저장</li>
+          <li>Render: 백엔드 API 실행</li>
+          <li>Vercel: 웹 프론트엔드 제공</li>
+          <li>open.er-api.com: 환율 정보 조회</li>
+        </ul>
 
         <h3>6. 이용자의 권리</h3>
         <p>

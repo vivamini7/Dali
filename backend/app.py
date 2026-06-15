@@ -5,6 +5,7 @@ load_dotenv()  # .env 파일 자동 로드
 import re
 import json
 import time
+import asyncio
 import base64
 import io
 import secrets
@@ -50,6 +51,9 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 STORE_PATH = DATA_DIR / "store.json"
 FREE_DAILY_AI_LIMIT = 3
 PAID_DAILY_AI_LIMIT = 100
+GUEST_DAILY_IMAGE_LIMIT = int(os.environ.get("GUEST_DAILY_IMAGE_LIMIT", "5"))
+FREE_DAILY_IMAGE_LIMIT = int(os.environ.get("FREE_DAILY_IMAGE_LIMIT", "10"))
+PAID_DAILY_IMAGE_LIMIT = int(os.environ.get("PAID_DAILY_IMAGE_LIMIT", "100"))
 
 PLANS = [
     {"id": "pass_1d", "kind": "pass", "days": 1, "label": "1일권", "priceUsd": 1.99},
@@ -69,11 +73,25 @@ def _today_key() -> str:
 
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
-_EMPTY_STORE = {"users": {}, "sessions": {}, "usage": {}, "clientErrors": []}
+_EMPTY_STORE = {
+    "users": {},
+    "sessions": {},
+    "usage": {},
+    "imageUsage": {},
+    "imageTranslationUsage": {},
+    "clientErrors": [],
+}
 
 
 def _new_empty_store() -> dict:
-    return {"users": {}, "sessions": {}, "usage": {}, "clientErrors": []}
+    return {
+        "users": {},
+        "sessions": {},
+        "usage": {},
+        "imageUsage": {},
+        "imageTranslationUsage": {},
+        "clientErrors": [],
+    }
 
 
 if DATABASE_URL:
@@ -109,6 +127,8 @@ if DATABASE_URL:
                         "users": data.get("users", {}),
                         "sessions": data.get("sessions", {}),
                         "usage": data.get("usage", {}),
+                        "imageUsage": data.get("imageUsage", {}),
+                        "imageTranslationUsage": data.get("imageTranslationUsage", {}),
                         "clientErrors": data.get("clientErrors", []),
                     }
         except Exception as e:
@@ -207,6 +227,59 @@ def _usage_status(store: dict, identity: str, user: dict | None) -> dict:
         "remaining": max(0, limit - used),
         "plan": entitlement,
     }
+
+
+def _image_usage_status(store: dict, identity: str, user: dict | None) -> dict:
+    entitlement = _active_entitlement(user)
+    if entitlement:
+        limit = PAID_DAILY_IMAGE_LIMIT
+    elif user:
+        limit = FREE_DAILY_IMAGE_LIMIT
+    else:
+        limit = GUEST_DAILY_IMAGE_LIMIT
+
+    date_key = _today_key()
+    bucket = store.setdefault("imageUsage", {}).setdefault(identity, {})
+    used = int(bucket.get(date_key, 0))
+    return {
+        "date": date_key,
+        "used": used,
+        "limit": limit,
+        "remaining": max(0, limit - used),
+        "plan": entitlement,
+    }
+
+
+def _upstream_http_error(provider: str, response: httpx.Response) -> HTTPException:
+    retry_after = response.headers.get("retry-after")
+    headers = {"Retry-After": retry_after} if retry_after else None
+
+    if response.status_code == 429:
+        return HTTPException(
+            429,
+            {
+                "code": f"{provider.lower()}_rate_limit",
+                "message": f"{provider} 요청이 일시적으로 많습니다. 잠시 후 다시 시도해주세요.",
+                "retryAfter": retry_after,
+            },
+            headers=headers,
+        )
+    if provider == "DeepL" and response.status_code == 456:
+        return HTTPException(
+            429,
+            {
+                "code": "deepl_quota_exceeded",
+                "message": "이번 달 번역 한도를 모두 사용했습니다. 텍스트 원문만 표시합니다.",
+            },
+        )
+
+    return HTTPException(
+        502,
+        {
+            "code": f"{provider.lower()}_error",
+            "message": f"{provider} 서비스 연결에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        },
+    )
 
 # ── 폰트 ─────────────────────────────────────────────────────
 FONT_PATHS = [
@@ -332,19 +405,19 @@ async def translate_with_deepl(texts: list) -> list:
     """DeepL로 텍스트 목록을 한국어로 번역"""
     if not texts or not DEEPL_API_KEY:
         return texts
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for attempt in range(3):
             resp = await client.post(
                 DEEPL_URL,
                 headers={"Authorization": f"DeepL-Auth-Key {DEEPL_API_KEY}",
                          "Content-Type": "application/json"},
                 json={"text": texts, "target_lang": "KO"},
             )
-        if resp.is_success:
-            return [t["text"] for t in resp.json().get("translations", [])]
-        print(f"[DeepL] 오류 {resp.status_code}: {resp.text[:200]}")
-    except Exception as e:
-        print(f"[DeepL] 예외: {e}")
+            if resp.is_success:
+                return [t["text"] for t in resp.json().get("translations", [])]
+            if resp.status_code not in {429, 500, 502, 503, 504} or attempt == 2:
+                raise _upstream_http_error("DeepL", resp)
+            await asyncio.sleep(2 ** attempt)
     return texts
 
 
@@ -431,6 +504,7 @@ async def me(
     return {
         "user": _public_user(user),
         "usage": _usage_status(store, identity, user),
+        "imageUsage": _image_usage_status(store, identity, user),
         "plans": PLANS,
     }
 
@@ -444,6 +518,8 @@ async def delete_account(authorization: str | None = Header(default=None)):
     store["users"].pop(email, None)
     store["sessions"] = {tok: em for tok, em in store.get("sessions", {}).items() if em != email}
     store.get("usage", {}).pop(f"user:{email.lower()}", None)
+    store.get("imageUsage", {}).pop(f"user:{email.lower()}", None)
+    store.get("imageTranslationUsage", {}).pop(f"user:{email.lower()}", None)
     _save_store(store)
     return {"ok": True}
 
@@ -874,9 +950,26 @@ async def get_rates():
 
 
 @app.post("/analyze")
-async def analyze(req: AnalyzeRequest):
+async def analyze(
+    req: AnalyzeRequest,
+    authorization: str | None = Header(default=None),
+    x_guest_id: str | None = Header(default=None),
+):
     if not GROQ_API_KEY:
         raise HTTPException(500, "서버에 GROQ_API_KEY가 설정되지 않았습니다.")
+
+    email, user, store = _get_user_by_token(authorization)
+    identity = _usage_identity(email, x_guest_id)
+    image_usage = _image_usage_status(store, identity, user)
+    if image_usage["remaining"] <= 0:
+        raise HTTPException(
+            429,
+            {
+                "code": "daily_image_limit",
+                "message": f"오늘 이미지 분석 {image_usage['limit']}회를 모두 사용했습니다. 내일 다시 이용해주세요.",
+                "usage": image_usage,
+            },
+        )
 
     image_url = f"data:{req.image_type};base64,{req.image_base64}"
     payload = {
@@ -902,8 +995,7 @@ async def analyze(req: AnalyzeRequest):
 
         print(f"[Groq/analyze] status={resp.status_code}")
         if not resp.is_success:
-            detail = resp.json().get("error", {}).get("message", resp.text[:200])
-            raise HTTPException(resp.status_code, detail)
+            raise _upstream_http_error("Groq", resp)
 
         content = resp.json()["choices"][0]["message"]["content"]
         match = re.search(r"\{[\s\S]*\}", content)
@@ -942,6 +1034,11 @@ async def analyze(req: AnalyzeRequest):
                 rate = rates.get(price.get("currency"))
                 price["krwAmount"] = round(float(price.get("amount") or 0) * rate) if rate else None
 
+        date_key = _today_key()
+        bucket = store.setdefault("imageUsage", {}).setdefault(identity, {})
+        bucket[date_key] = int(bucket.get(date_key, 0)) + 1
+        _save_store(store)
+        result["imageUsage"] = _image_usage_status(store, identity, user)
         return result
 
     except HTTPException:
@@ -952,9 +1049,28 @@ async def analyze(req: AnalyzeRequest):
 
 
 @app.post("/translate-image")
-async def translate_image(req: AnalyzeRequest):
+async def translate_image(
+    req: AnalyzeRequest,
+    authorization: str | None = Header(default=None),
+    x_guest_id: str | None = Header(default=None),
+):
     if not GROQ_API_KEY:
         raise HTTPException(500, "서버에 GROQ_API_KEY가 설정되지 않았습니다.")
+
+    email, user, store = _get_user_by_token(authorization)
+    identity = _usage_identity(email, x_guest_id)
+    date_key = _today_key()
+    analyzed = int(store.setdefault("imageUsage", {}).setdefault(identity, {}).get(date_key, 0))
+    translated_bucket = store.setdefault("imageTranslationUsage", {}).setdefault(identity, {})
+    translated = int(translated_bucket.get(date_key, 0))
+    if analyzed <= translated:
+        raise HTTPException(
+            429,
+            {
+                "code": "translation_requires_analysis",
+                "message": "이미지 분석을 먼저 완료한 뒤 번역 이미지를 생성해주세요.",
+            },
+        )
 
     try:
         # 1. Groq 비전 호출 → OCR만 (텍스트 위치 감지)
@@ -981,7 +1097,7 @@ async def translate_image(req: AnalyzeRequest):
 
         print(f"[Groq/OCR] status={resp.status_code}")
         if not resp.is_success:
-            raise HTTPException(resp.status_code, resp.text[:200])
+            raise _upstream_http_error("Groq", resp)
 
         content = resp.json()["choices"][0]["message"]["content"]
         print(f"[Groq/OCR] {content[:300]}")
@@ -1051,6 +1167,8 @@ async def translate_image(req: AnalyzeRequest):
         img_pil.save(out_buf, format="JPEG", quality=85)
         out_b64 = base64.b64encode(out_buf.getvalue()).decode()
 
+        translated_bucket[date_key] = translated + 1
+        _save_store(store)
         return {"translated_image": out_b64}
 
     except HTTPException:
