@@ -13,10 +13,6 @@ export default function SquirrelLogo({ size = 36, style = {} }) {
       aria-label="Dalibaba 로고"
     >
       <defs>
-        <linearGradient id="sq-bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FDE68A"/>
-          <stop offset="100%" stopColor="#D97706"/>
-        </linearGradient>
         <linearGradient id="sq-coin" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#FEF9C3"/>
           <stop offset="100%" stopColor="#FCD34D"/>
@@ -26,9 +22,6 @@ export default function SquirrelLogo({ size = 36, style = {} }) {
           <stop offset="100%" stopColor="#0C0A09"/>
         </radialGradient>
       </defs>
-
-      {/* 배경 */}
-      <rect width="120" height="120" rx="28" fill="url(#sq-bg)"/>
 
       {/* 꼬리 */}
       <path d="M 80 108 C 105 88 112 54 97 28 C 90 16 74 16 72 27 C 84 38 86 63 73 78 C 97 74 95 95 83 105 Z" fill="#92400E"/>

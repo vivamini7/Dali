@@ -110,7 +110,7 @@ export default function CameraPage({
               <span className="cam-speed-line line-two" />
               <span className="cam-speed-line line-three" />
               <div className="cam-runner">
-                <img src="/app-icon-fullbleed-v20260610.png" alt="" />
+                <img src="/logo-back.png" alt="" />
               </div>
               <div className="cam-runner-shadow" />
             </div>
