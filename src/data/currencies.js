@@ -1,0 +1,15 @@
+export const EXCHANGE_CURRENCIES = [
+  { code: 'JPY', name: '일본 엔', flag: '🇯🇵' },
+  { code: 'USD', name: '미국 달러', flag: '🇺🇸' },
+  { code: 'EUR', name: '유로', flag: '🇪🇺' },
+  { code: 'CNY', name: '중국 위안', flag: '🇨🇳' },
+  { code: 'THB', name: '태국 바트', flag: '🇹🇭' },
+  { code: 'VND', name: '베트남 동', flag: '🇻🇳' },
+  { code: 'SGD', name: '싱가포르 달러', flag: '🇸🇬' },
+  { code: 'MYR', name: '말레이시아 링깃', flag: '🇲🇾' },
+  { code: 'HKD', name: '홍콩 달러', flag: '🇭🇰' },
+  { code: 'IDR', name: '인도네시아 루피아', flag: '🇮🇩' },
+  { code: 'PHP', name: '필리핀 페소', flag: '🇵🇭' },
+  { code: 'GBP', name: '영국 파운드', flag: '🇬🇧' },
+  { code: 'AUD', name: '호주 달러', flag: '🇦🇺' },
+]
