@@ -179,13 +179,17 @@ export default function HomePage({
               <>
                 <div className="social-login-list">
                   <button type="button" className="social-login-btn google" onClick={() => onSocialLogin?.('google')} aria-label="Google 계정으로 계속">
-                    <span>G</span>
+                    <span className="social-brand-icon google-icon" aria-hidden="true">G</span>
                   </button>
                   <button type="button" className="social-login-btn kakao" onClick={() => onSocialLogin?.('kakao')} aria-label="카카오 계정으로 계속">
-                    <span>K</span>
+                    <span className="social-brand-icon kakao-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M12 4C6.9 4 3 7.1 3 10.9c0 2.5 1.7 4.7 4.3 5.9l-.9 3.1c-.1.3.2.5.5.3l3.8-2.5c.4 0 .9.1 1.3.1 5.1 0 9-3.1 9-6.9S17.1 4 12 4Z" />
+                      </svg>
+                    </span>
                   </button>
                   <button type="button" className="social-login-btn naver" onClick={() => onSocialLogin?.('naver')} aria-label="네이버 계정으로 계속">
-                    <span>N</span>
+                    <span className="social-brand-icon naver-icon" aria-hidden="true">N</span>
                   </button>
                 </div>
 
