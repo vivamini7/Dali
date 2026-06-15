@@ -20,6 +20,12 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7860'
 const GUEST_ID_KEY = 'dalibaba_guest_id'
 const AUTH_TOKEN_KEY = 'dalibaba_auth_token'
 
+function screenFromPath() {
+  if (window.location.pathname === '/privacy') return 'privacy'
+  if (window.location.pathname === '/terms') return 'terms'
+  return 'home'
+}
+
 async function getApiError(response, fallback) {
   try {
     const body = await response.json()
@@ -107,7 +113,23 @@ export default function App() {
   useEffect(() => { localStorage.setItem('defaultCurrency', defaultCurrency) }, [defaultCurrency])
 
   /* ── 화면 상태 ── */
-  const [screen, setScreen] = useState('home')  // 'home'|'camera'|'result'|'order'|'settings'
+  const [screen, setScreen] = useState(screenFromPath)  // 'home'|'camera'|'result'|'order'|'settings'
+
+  const openPublicPage = useCallback((page) => {
+    window.history.pushState({}, '', `/${page}`)
+    setScreen(page)
+  }, [])
+
+  const closePublicPage = useCallback(() => {
+    window.history.pushState({}, '', '/')
+    setScreen('settings')
+  }, [])
+
+  useEffect(() => {
+    const handlePopState = () => setScreen(screenFromPath())
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   /* ── 분석 데이터 ── */
   const [capturedImage, setCapturedImage] = useState(null)
@@ -592,13 +614,13 @@ export default function App() {
           onDeleteAccount={deleteAccount}
           onPurchasePlan={purchasePlan}
           onBack={() => setScreen('home')}
-          onPrivacyClick={() => setScreen('privacy')}
-          onTermsClick={() => setScreen('terms')}
+          onPrivacyClick={() => openPublicPage('privacy')}
+          onTermsClick={() => openPublicPage('terms')}
         />
       ) : screen === 'privacy' ? (
-        <PrivacyPage onBack={() => setScreen('settings')} />
+        <PrivacyPage onBack={closePublicPage} />
       ) : screen === 'terms' ? (
-        <TermsPage onBack={() => setScreen('settings')} />
+        <TermsPage onBack={closePublicPage} />
       ) : (
         <HomePage
           onCameraClick={goCamera}
