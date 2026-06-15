@@ -50,8 +50,13 @@ export default function HomePage({
   user,
   aiUsage,
   authError,
+  authNotice,
   authLoading,
   onAuthSubmit,
+  onPasswordReset,
+  onPasswordUpdate,
+  passwordRecovery,
+  onSocialLogin,
   onLogout,
 }) {
   const [rates,     setRates]     = useState({})
@@ -63,7 +68,6 @@ export default function HomePage({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authOpen, setAuthOpen] = useState(false)
-  const [socialNotice, setSocialNotice] = useState('')
   const [rememberLogin, setRememberLogin] = useState(() => localStorage.getItem('dalibaba_remember_login') === '1')
   const cameraRef = useRef(null)
   const galleryRef = useRef(null)
@@ -104,6 +108,10 @@ export default function HomePage({
 
   const submitAuth = (e) => {
     e.preventDefault()
+    if (passwordRecovery) {
+      onPasswordUpdate?.(password)
+      return
+    }
     if (rememberLogin) {
       localStorage.setItem('dalibaba_remember_login', '1')
       localStorage.setItem('dalibaba_saved_email', email)
@@ -122,9 +130,9 @@ export default function HomePage({
     if (user) setAuthOpen(false)
   }, [user])
 
-  const openSocialLogin = (provider) => {
-    setSocialNotice(`${provider} 연동은 개발자 콘솔 설정 후 연결됩니다.`)
-  }
+  useEffect(() => {
+    if (passwordRecovery) setAuthOpen(true)
+  }, [passwordRecovery])
 
   const krwRate = rates['KRW'] || 0
   const activeRate = PREVIEW_RATES[rateIndex]
@@ -162,67 +170,90 @@ export default function HomePage({
             <div className="home-auth-top">
               <div>
                 <span className="home-account-kicker">계정</span>
-                <strong>{authMode === 'login' ? '로그인' : '회원가입'}</strong>
+                <strong>{passwordRecovery ? '새 비밀번호 설정' : authMode === 'login' ? '로그인' : '회원가입'}</strong>
               </div>
               <button className="home-auth-close" type="button" onClick={() => setAuthOpen(false)}>✕</button>
             </div>
 
-            <div className="social-login-list">
-              <button type="button" className="social-login-btn google" onClick={() => openSocialLogin('Google')} aria-label="Google 계정으로 계속">
-                <span>G</span>
-              </button>
-              <button type="button" className="social-login-btn kakao" onClick={() => openSocialLogin('Kakao')} aria-label="카카오 계정으로 계속">
-                <span>K</span>
-              </button>
-              <button type="button" className="social-login-btn naver" onClick={() => openSocialLogin('Naver')} aria-label="네이버 계정으로 계속">
-                <span>N</span>
-              </button>
-            </div>
+            {!passwordRecovery && (
+              <>
+                <div className="social-login-list">
+                  <button type="button" className="social-login-btn google" onClick={() => onSocialLogin?.('google')} aria-label="Google 계정으로 계속">
+                    <span>G</span>
+                  </button>
+                  <button type="button" className="social-login-btn kakao" onClick={() => onSocialLogin?.('kakao')} aria-label="카카오 계정으로 계속">
+                    <span>K</span>
+                  </button>
+                  <button type="button" className="social-login-btn naver" onClick={() => onSocialLogin?.('naver')} aria-label="네이버 계정으로 계속">
+                    <span>N</span>
+                  </button>
+                </div>
 
-            <div className="home-auth-divider"><span>또는 이메일</span></div>
+                <div className="home-auth-divider"><span>또는 이메일</span></div>
+              </>
+            )}
 
             <div className="home-auth-fields">
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="email@example.com"
-                autoComplete="email"
-                required
-              />
+              {!passwordRecovery && (
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  autoComplete="email"
+                  required
+                />
+              )}
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="비밀번호"
-                autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
-                minLength={6}
+                placeholder={passwordRecovery ? '새 비밀번호 (8자 이상)' : '비밀번호'}
+                autoComplete={authMode === 'login' && !passwordRecovery ? 'current-password' : 'new-password'}
+                minLength={passwordRecovery ? 8 : 6}
                 required
               />
             </div>
-            <label className="home-remember-row">
-              <input
-                type="checkbox"
-                checked={rememberLogin}
-                onChange={e => setRememberLogin(e.target.checked)}
-              />
-              <span>로그인 정보 저장하기</span>
-            </label>
+            {!passwordRecovery && (
+              <label className="home-remember-row">
+                <input
+                  type="checkbox"
+                  checked={rememberLogin}
+                  onChange={e => setRememberLogin(e.target.checked)}
+                />
+                <span>로그인 정보 저장하기</span>
+              </label>
+            )}
             {authError && <div className="home-auth-error">{authError}</div>}
-            {socialNotice && <div className="home-auth-info">{socialNotice}</div>}
+            {authNotice && <div className="home-auth-info">{authNotice}</div>}
             <button className="home-auth-submit" type="submit" disabled={authLoading}>
-              {authLoading ? '처리 중...' : authMode === 'login' ? '이메일로 로그인' : '회원가입 완료'}
+              {authLoading
+                ? '처리 중...'
+                : passwordRecovery
+                  ? '새 비밀번호 저장'
+                  : authMode === 'login'
+                    ? '이메일로 로그인'
+                    : '회원가입 완료'}
             </button>
-            <button
-              className="home-auth-switch"
-              type="button"
-              onClick={() => {
-                setAuthMode(authMode === 'login' ? 'register' : 'login')
-                setSocialNotice('')
-              }}
-            >
-              {authMode === 'login' ? '이메일로 회원가입하기' : '이미 계정이 있어요. 로그인하기'}
-            </button>
+            {!passwordRecovery && authMode === 'login' && (
+              <button
+                className="home-auth-secondary"
+                type="button"
+                disabled={authLoading}
+                onClick={() => onPasswordReset?.(email)}
+              >
+                비밀번호를 잊으셨나요?
+              </button>
+            )}
+            {!passwordRecovery && (
+              <button
+                className="home-auth-switch"
+                type="button"
+                onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+              >
+                {authMode === 'login' ? '이메일로 회원가입하기' : '이미 계정이 있어요. 로그인하기'}
+              </button>
+            )}
           </form>
         </div>
       )}

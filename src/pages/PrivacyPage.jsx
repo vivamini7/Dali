@@ -14,7 +14,8 @@ export default function PrivacyPage({ onBack }) {
 
         <h3>1. 수집하는 개인정보 항목</h3>
         <p>
-          Dalibaba(이하 "서비스")는 회원가입 시 이메일 주소와 비밀번호(암호화 저장)를 수집합니다.
+          Dalibaba(이하 "서비스")는 회원가입 및 로그인 시 이메일 주소와 인증 제공자 정보를 처리합니다.
+          비밀번호와 소셜 로그인 인증 정보는 Supabase Auth가 처리하며, 서비스 서버는 비밀번호 원문을 저장하지 않습니다.
           비회원으로 이용하는 경우 기기에 발급되는 임의의 게스트 식별자만 저장하며, 별도의 개인 식별 정보는 수집하지 않습니다.
         </p>
 
@@ -48,7 +49,8 @@ export default function PrivacyPage({ onBack }) {
         <ul>
           <li>Groq: 이미지 인식, 메뉴·영수증 분석, AI 질의응답</li>
           <li>DeepL: 이미지에서 추출한 텍스트의 한국어 번역</li>
-          <li>Supabase: 회원, 세션, 이용권 및 사용량 데이터 저장</li>
+          <li>Supabase: 회원 인증, 이메일 인증·비밀번호 재설정, 회원·이용권·사용량 데이터 저장</li>
+          <li>Google 및 Kakao: 이용자가 선택한 경우 소셜 로그인 인증</li>
           <li>Render: 백엔드 API 실행</li>
           <li>Vercel: 웹 프론트엔드 제공</li>
           <li>open.er-api.com: 환율 정보 조회</li>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import HomePage     from './pages/HomePage'
 import CameraPage   from './pages/CameraPage'
 import ResultPage   from './pages/ResultPage'
@@ -6,6 +6,11 @@ import OrderPage    from './pages/OrderPage'
 import SettingsPage from './pages/SettingsPage'
 import PrivacyPage  from './pages/PrivacyPage'
 import TermsPage    from './pages/TermsPage'
+import {
+  authRedirectUrl,
+  isSupabaseConfigured,
+  supabase,
+} from './lib/supabase'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7860'
 const GUEST_ID_KEY = 'dalibaba_guest_id'
@@ -119,7 +124,10 @@ export default function App() {
   const [plans, setPlans] = useState([])
   const [aiUsage, setAiUsage] = useState(null)
   const [authError, setAuthError] = useState('')
+  const [authNotice, setAuthNotice] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
+  const exchangedSupabaseToken = useRef('')
   const [guestId] = useState(() => {
     const existing = localStorage.getItem(GUEST_ID_KEY)
     if (existing) return existing
@@ -148,30 +156,166 @@ export default function App() {
 
   useEffect(() => { refreshAccount() }, [refreshAccount])
 
+  const saveAppSession = useCallback(async (data, remember = true) => {
+    localStorage.removeItem(AUTH_TOKEN_KEY)
+    sessionStorage.removeItem(AUTH_TOKEN_KEY)
+    if (remember) localStorage.setItem(AUTH_TOKEN_KEY, data.token)
+    else sessionStorage.setItem(AUTH_TOKEN_KEY, data.token)
+    setAuthToken(data.token)
+    setUser(data.user)
+    await refreshAccount(data.token)
+  }, [refreshAccount])
+
+  const exchangeSupabaseSession = useCallback(async (accessToken, remember = true) => {
+    if (!accessToken || exchangedSupabaseToken.current === accessToken) return
+    exchangedSupabaseToken.current = accessToken
+    try {
+      const res = await fetch(`${API_URL}/auth/supabase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: accessToken }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || '로그인 연결에 실패했습니다.')
+      await saveAppSession(data, remember)
+      setAuthError('')
+      setAuthNotice('')
+    } catch (error) {
+      exchangedSupabaseToken.current = ''
+      throw error
+    }
+  }, [saveAppSession])
+
+  useEffect(() => {
+    if (!supabase) return undefined
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.access_token) {
+        exchangeSupabaseSession(data.session.access_token, true).catch(error => {
+          setAuthError(error.message || '로그인 연결에 실패했습니다.')
+        })
+      }
+    })
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true)
+        setAuthNotice('새 비밀번호를 입력해 주세요.')
+      }
+      if (session?.access_token && event !== 'TOKEN_REFRESHED') {
+        window.setTimeout(() => {
+          exchangeSupabaseSession(session.access_token, true).catch(error => {
+            setAuthError(error.message || '로그인 연결에 실패했습니다.')
+          })
+        }, 0)
+      }
+    })
+
+    return () => listener.subscription.unsubscribe()
+  }, [exchangeSupabaseSession])
+
   const submitAuth = useCallback(async (mode, email, password, remember = true) => {
     setAuthLoading(true)
     setAuthError('')
+    setAuthNotice('')
     try {
+      if (isSupabaseConfigured) {
+        if (mode === 'register') {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: authRedirectUrl() },
+          })
+          if (error) throw error
+          if (data.session?.access_token) {
+            await exchangeSupabaseSession(data.session.access_token, remember)
+          } else {
+            setAuthNotice('인증 메일을 보냈습니다. 메일의 링크를 누른 뒤 로그인해 주세요.')
+          }
+          return
+        }
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (!error && data.session?.access_token) {
+          await exchangeSupabaseSession(data.session.access_token, remember)
+          return
+        }
+        // Existing users created before Supabase Auth can still use the legacy login.
+      }
+
       const res = await fetch(`${API_URL}/auth/${mode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || '로그인에 실패했습니다.')
-      localStorage.removeItem(AUTH_TOKEN_KEY)
-      sessionStorage.removeItem(AUTH_TOKEN_KEY)
-      if (remember) localStorage.setItem(AUTH_TOKEN_KEY, data.token)
-      else sessionStorage.setItem(AUTH_TOKEN_KEY, data.token)
-      setAuthToken(data.token)
-      setUser(data.user)
-      await refreshAccount(data.token)
+      if (!res.ok) {
+        const fallback = mode === 'register'
+          ? '회원가입에 실패했습니다.'
+          : '이메일 또는 비밀번호가 올바르지 않습니다.'
+        throw new Error(data.detail || fallback)
+      }
+      await saveAppSession(data, remember)
     } catch (e) {
       setAuthError(typeof e.message === 'string' ? e.message : '로그인에 실패했습니다.')
     } finally {
       setAuthLoading(false)
     }
-  }, [refreshAccount])
+  }, [exchangeSupabaseSession, saveAppSession])
+
+  const requestPasswordReset = useCallback(async (email) => {
+    setAuthLoading(true)
+    setAuthError('')
+    setAuthNotice('')
+    try {
+      if (!supabase) throw new Error('비밀번호 재설정 기능이 아직 설정되지 않았습니다.')
+      if (!email?.trim()) throw new Error('가입한 이메일 주소를 입력해 주세요.')
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: authRedirectUrl(),
+      })
+      if (error) throw error
+      setAuthNotice('비밀번호 재설정 메일을 보냈습니다.')
+    } catch (error) {
+      setAuthError(error.message || '비밀번호 재설정 메일을 보내지 못했습니다.')
+    } finally {
+      setAuthLoading(false)
+    }
+  }, [])
+
+  const updatePassword = useCallback(async (password) => {
+    setAuthLoading(true)
+    setAuthError('')
+    try {
+      if (!supabase) throw new Error('비밀번호 재설정 기능이 아직 설정되지 않았습니다.')
+      if ((password || '').length < 8) throw new Error('새 비밀번호는 8자 이상이어야 합니다.')
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) throw error
+      setPasswordRecovery(false)
+      setAuthNotice('비밀번호가 변경되었습니다.')
+    } catch (error) {
+      setAuthError(error.message || '비밀번호를 변경하지 못했습니다.')
+    } finally {
+      setAuthLoading(false)
+    }
+  }, [])
+
+  const socialLogin = useCallback(async (provider) => {
+    setAuthError('')
+    setAuthNotice('')
+    try {
+      if (!supabase) throw new Error('소셜 로그인이 아직 설정되지 않았습니다.')
+      if (provider === 'naver') {
+        throw new Error('네이버 로그인은 Naver Developers 앱 키 발급 후 별도로 연결됩니다.')
+      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: authRedirectUrl() },
+      })
+      if (error) throw error
+    } catch (error) {
+      setAuthError(error.message || '소셜 로그인을 시작하지 못했습니다.')
+    }
+  }, [])
 
   const deleteAccount = useCallback(async () => {
     setAuthError('')
@@ -185,17 +329,20 @@ export default function App() {
       sessionStorage.removeItem(AUTH_TOKEN_KEY)
       setAuthToken('')
       setUser(null)
+      await supabase?.auth.signOut()
       await refreshAccount('')
     } catch (e) {
       setAuthError(typeof e.message === 'string' ? e.message : '계정 탈퇴에 실패했습니다.')
     }
   }, [authHeaders, refreshAccount])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     localStorage.removeItem(AUTH_TOKEN_KEY)
     sessionStorage.removeItem(AUTH_TOKEN_KEY)
     setAuthToken('')
     setUser(null)
+    exchangedSupabaseToken.current = ''
+    await supabase?.auth.signOut()
     refreshAccount('')
   }, [refreshAccount])
 
@@ -390,8 +537,13 @@ export default function App() {
           plans={plans}
           aiUsage={aiUsage}
           authError={authError}
+          authNotice={authNotice}
           authLoading={authLoading}
           onAuthSubmit={submitAuth}
+          onPasswordReset={requestPasswordReset}
+          onPasswordUpdate={updatePassword}
+          passwordRecovery={passwordRecovery}
+          onSocialLogin={socialLogin}
           onLogout={logout}
           onDeleteAccount={deleteAccount}
           onPurchasePlan={purchasePlan}
@@ -412,8 +564,13 @@ export default function App() {
           user={user}
           aiUsage={aiUsage}
           authError={authError}
+          authNotice={authNotice}
           authLoading={authLoading}
           onAuthSubmit={submitAuth}
+          onPasswordReset={requestPasswordReset}
+          onPasswordUpdate={updatePassword}
+          passwordRecovery={passwordRecovery}
+          onSocialLogin={socialLogin}
           onLogout={logout}
         />
       )}

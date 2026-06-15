@@ -454,6 +454,15 @@ img { display: block; max-width: 100%; }
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.home-auth-secondary {
+  min-height: 34px;
+  color: var(--text-2);
+  font-size: .74rem;
+  font-weight: 800;
+}
+.home-auth-secondary:disabled {
+  opacity: .56;
+}
 
 /* 로고 */
 .home-logo { display: flex; align-items: center; gap: 7px; }

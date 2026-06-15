@@ -46,6 +46,10 @@ GROQ_MODEL    = "meta-llama/llama-4-scout-17b-16e-instruct"
 DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY", "")
 DEEPL_URL     = "https://api-free.deepl.com/v2/translate"
 
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "").strip()
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+
 KST = timezone(timedelta(hours=9))
 DATA_DIR = Path(__file__).resolve().parent / "data"
 STORE_PATH = DATA_DIR / "store.json"
@@ -194,6 +198,8 @@ def _public_user(user: dict | None) -> dict | None:
         "email": user.get("email"),
         "createdAt": user.get("createdAt"),
         "entitlement": entitlement,
+        "authProvider": user.get("authProvider", "email"),
+        "emailVerified": bool(user.get("emailVerified")),
     }
 
 
@@ -431,6 +437,10 @@ class AuthRequest(BaseModel):
     password: str
 
 
+class SupabaseAuthRequest(BaseModel):
+    access_token: str
+
+
 class PurchaseRequest(BaseModel):
     planId: str
 
@@ -473,9 +483,63 @@ async def login(req: AuthRequest):
     user = store["users"].get(email)
     if not user:
         raise HTTPException(401, "이메일 또는 비밀번호가 올바르지 않습니다.")
+    if not user.get("salt") or not user.get("passwordHash"):
+        raise HTTPException(401, "이 계정은 이메일 인증 또는 소셜 로그인으로 로그인해 주세요.")
     _, password_hash = _hash_password(req.password, user["salt"])
     if password_hash != user["passwordHash"]:
         raise HTTPException(401, "이메일 또는 비밀번호가 올바르지 않습니다.")
+
+    token = secrets.token_urlsafe(32)
+    store["sessions"][token] = email
+    _save_store(store)
+    return {"token": token, "user": _public_user(user)}
+
+
+@app.post("/auth/supabase")
+async def supabase_login(req: SupabaseAuthRequest):
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        raise HTTPException(503, "Supabase Auth가 아직 설정되지 않았습니다.")
+
+    access_token = req.access_token.strip()
+    if not access_token:
+        raise HTTPException(400, "Supabase access token이 필요합니다.")
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {access_token}",
+            },
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(401, "로그인 정보가 만료되었거나 올바르지 않습니다.")
+
+    auth_user = response.json()
+    email = str(auth_user.get("email") or "").strip().lower()
+    supabase_user_id = str(auth_user.get("id") or "").strip()
+    if not email or not supabase_user_id:
+        raise HTTPException(400, "이메일을 확인할 수 없는 계정입니다.")
+
+    provider = str(
+        auth_user.get("app_metadata", {}).get("provider")
+        or auth_user.get("aud")
+        or "email"
+    )
+    store = _load_store()
+    user = store["users"].get(email)
+    if not user:
+        user = {
+            "email": email,
+            "createdAt": _now().isoformat(),
+            "entitlement": None,
+        }
+        store["users"][email] = user
+
+    user["supabaseUserId"] = supabase_user_id
+    user["authProvider"] = provider
+    user["emailVerified"] = bool(auth_user.get("email_confirmed_at"))
 
     token = secrets.token_urlsafe(32)
     store["sessions"][token] = email
@@ -514,6 +578,21 @@ async def delete_account(authorization: str | None = Header(default=None)):
     email, user, store = _get_user_by_token(authorization)
     if not email or not user:
         raise HTTPException(401, "로그인이 필요합니다.")
+
+    supabase_user_id = str(user.get("supabaseUserId") or "").strip()
+    if supabase_user_id:
+        if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+            raise HTTPException(503, "계정 탈퇴를 위해 Supabase 관리자 키 설정이 필요합니다.")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.delete(
+                f"{SUPABASE_URL}/auth/v1/admin/users/{supabase_user_id}",
+                headers={
+                    "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                },
+            )
+        if response.status_code not in {200, 204, 404}:
+            raise HTTPException(502, "인증 계정을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.")
 
     store["users"].pop(email, None)
     store["sessions"] = {tok: em for tok, em in store.get("sessions", {}).items() if em != email}
