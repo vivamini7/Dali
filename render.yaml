@@ -21,6 +21,12 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: NAVER_CLIENT_ID
+        sync: false
+      - key: NAVER_CLIENT_SECRET
+        sync: false
+      - key: NAVER_CALLBACK_URL
+        value: https://dalibaba-api.onrender.com/auth/naver/callback
       - key: GROQ_API_KEY
         sync: false
       - key: DEEPL_API_KEY

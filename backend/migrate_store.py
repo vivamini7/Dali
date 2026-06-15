@@ -23,6 +23,8 @@ def main() -> None:
         store.setdefault(key, {})
     store.setdefault("imageUsage", {})
     store.setdefault("imageTranslationUsage", {})
+    store.setdefault("oauthStates", {})
+    store.setdefault("oauthCodes", {})
     store.setdefault("clientErrors", [])
 
     with psycopg.connect(DATABASE_URL) as conn:
@@ -45,6 +47,8 @@ def main() -> None:
                 "usage": {},
                 "imageUsage": {},
                 "imageTranslationUsage": {},
+                "oauthStates": {},
+                "oauthCodes": {},
                 "clientErrors": [],
             },
         )

@@ -212,40 +212,81 @@ export default function App() {
     }
   }, [saveAppSession])
 
-  useEffect(() => {
-    if (!supabase) return undefined
-
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.access_token) {
-        exchangeSupabaseSession(data.session.access_token, true).catch(error => {
-          setAuthError(error.message || '로그인 연결에 실패했습니다.')
-        })
-      }
+  const exchangeNaverCode = useCallback(async (code) => {
+    if (!code) return
+    const res = await fetch(`${API_URL}/auth/naver/exchange`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
     })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || '네이버 로그인 연결에 실패했습니다.')
+    await saveAppSession(data, true)
+    setAuthError('')
+    setAuthNotice('')
+  }, [saveAppSession])
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setPasswordRecovery(true)
-        setAuthNotice('새 비밀번호를 입력해 주세요.')
-      }
-      if (session?.access_token && event !== 'TOKEN_REFRESHED') {
-        window.setTimeout(() => {
-          exchangeSupabaseSession(session.access_token, true).catch(error => {
+  const handleAuthReturnUrl = useCallback(async (url) => {
+    const parsed = new URL(url)
+    const authErrorMessage = parsed.searchParams.get('auth_error')
+    if (authErrorMessage) throw new Error(authErrorMessage)
+
+    const naverCode = parsed.searchParams.get('naver_code')
+    if (naverCode) {
+      await exchangeNaverCode(naverCode)
+      return
+    }
+
+    const session = await applySessionFromAuthUrl(url)
+    if (session?.access_token) {
+      await exchangeSupabaseSession(session.access_token, true)
+    }
+  }, [exchangeNaverCode, exchangeSupabaseSession])
+
+  useEffect(() => {
+    let supabaseListener
+    if (supabase) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.access_token) {
+          exchangeSupabaseSession(data.session.access_token, true).catch(error => {
             setAuthError(error.message || '로그인 연결에 실패했습니다.')
           })
-        }, 0)
+        }
+      })
+
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setPasswordRecovery(true)
+          setAuthNotice('새 비밀번호를 입력해 주세요.')
+        }
+        if (session?.access_token && event !== 'TOKEN_REFRESHED') {
+          window.setTimeout(() => {
+            exchangeSupabaseSession(session.access_token, true).catch(error => {
+              setAuthError(error.message || '로그인 연결에 실패했습니다.')
+            })
+          }, 0)
+        }
+      })
+      supabaseListener = data
+    }
+
+    if (!Capacitor.isNativePlatform()) {
+      const currentUrl = new URL(window.location.href)
+      if (currentUrl.searchParams.has('naver_code') || currentUrl.searchParams.has('auth_error')) {
+        handleAuthReturnUrl(currentUrl.href)
+          .catch(error => setAuthError(error.message || '로그인 정보를 적용하지 못했습니다.'))
+          .finally(() => {
+            window.history.replaceState({}, '', currentUrl.pathname)
+          })
       }
-    })
+    }
 
     let appUrlListener
     if (Capacitor.isNativePlatform()) {
       CapacitorApp.addListener('appUrlOpen', async ({ url }) => {
         try {
-          const session = await applySessionFromAuthUrl(url)
+          await handleAuthReturnUrl(url)
           await Browser.close().catch(() => {})
-          if (session?.access_token) {
-            await exchangeSupabaseSession(session.access_token, true)
-          }
         } catch (error) {
           setAuthError(error.message || '로그인 정보를 앱에 적용하지 못했습니다.')
         }
@@ -256,10 +297,7 @@ export default function App() {
       CapacitorApp.getLaunchUrl().then(async launch => {
         if (!launch?.url) return
         try {
-          const session = await applySessionFromAuthUrl(launch.url)
-          if (session?.access_token) {
-            await exchangeSupabaseSession(session.access_token, true)
-          }
+          await handleAuthReturnUrl(launch.url)
         } catch (error) {
           setAuthError(error.message || '로그인 정보를 앱에 적용하지 못했습니다.')
         }
@@ -267,10 +305,10 @@ export default function App() {
     }
 
     return () => {
-      listener.subscription.unsubscribe()
+      supabaseListener?.subscription.unsubscribe()
       appUrlListener?.remove()
     }
-  }, [exchangeSupabaseSession])
+  }, [exchangeSupabaseSession, handleAuthReturnUrl])
 
   const submitAuth = useCallback(async (mode, email, password, remember = true) => {
     setAuthLoading(true)
@@ -361,10 +399,16 @@ export default function App() {
     setAuthError('')
     setAuthNotice('')
     try {
-      if (!supabase) throw new Error('소셜 로그인이 아직 설정되지 않았습니다.')
       if (provider === 'naver') {
-        throw new Error('네이버 로그인은 Naver Developers 앱 키 발급 후 별도로 연결됩니다.')
+        const returnTo = Capacitor.isNativePlatform()
+          ? 'dalibaba://auth/callback'
+          : `${window.location.origin}/`
+        const url = `${API_URL}/auth/naver/start?return_to=${encodeURIComponent(returnTo)}`
+        if (Capacitor.isNativePlatform()) await Browser.open({ url })
+        else window.location.assign(url)
+        return
       }
+      if (!supabase) throw new Error('소셜 로그인이 아직 설정되지 않았습니다.')
       const native = Capacitor.isNativePlatform()
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,

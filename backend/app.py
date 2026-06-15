@@ -10,6 +10,7 @@ import base64
 import io
 import secrets
 import hashlib
+from urllib.parse import urlencode
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import httpx
@@ -17,9 +18,10 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from json_repair import repair_json
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 app = FastAPI(title="Dalibaba API")
@@ -49,6 +51,13 @@ DEEPL_URL     = "https://api-free.deepl.com/v2/translate"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "").strip()
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+
+NAVER_CLIENT_ID = os.environ.get("NAVER_CLIENT_ID", "").strip()
+NAVER_CLIENT_SECRET = os.environ.get("NAVER_CLIENT_SECRET", "").strip()
+NAVER_CALLBACK_URL = os.environ.get(
+    "NAVER_CALLBACK_URL",
+    "https://dalibaba-api.onrender.com/auth/naver/callback",
+).strip()
 
 KST = timezone(timedelta(hours=9))
 DATA_DIR = Path(__file__).resolve().parent / "data"
@@ -83,6 +92,8 @@ _EMPTY_STORE = {
     "usage": {},
     "imageUsage": {},
     "imageTranslationUsage": {},
+    "oauthStates": {},
+    "oauthCodes": {},
     "clientErrors": [],
 }
 
@@ -94,6 +105,8 @@ def _new_empty_store() -> dict:
         "usage": {},
         "imageUsage": {},
         "imageTranslationUsage": {},
+        "oauthStates": {},
+        "oauthCodes": {},
         "clientErrors": [],
     }
 
@@ -133,6 +146,8 @@ if DATABASE_URL:
                         "usage": data.get("usage", {}),
                         "imageUsage": data.get("imageUsage", {}),
                         "imageTranslationUsage": data.get("imageTranslationUsage", {}),
+                        "oauthStates": data.get("oauthStates", {}),
+                        "oauthCodes": data.get("oauthCodes", {}),
                         "clientErrors": data.get("clientErrors", []),
                     }
         except Exception as e:
@@ -441,6 +456,10 @@ class SupabaseAuthRequest(BaseModel):
     access_token: str
 
 
+class OAuthCodeRequest(BaseModel):
+    code: str
+
+
 class PurchaseRequest(BaseModel):
     planId: str
 
@@ -556,6 +575,143 @@ async def social_login(provider: str):
         501,
         f"{provider} 로그인은 개발자 콘솔의 client_id, client_secret, redirect URL 설정 후 연결해야 합니다.",
     )
+
+
+def _naver_return_url(value: str) -> str:
+    return_to = value.strip()
+    allowed_web_origins = {
+        origin for origin in FRONTEND_ORIGINS
+        if origin != "*" and origin.startswith(("https://", "http://localhost:"))
+    }
+    if return_to == "dalibaba://auth/callback":
+        return return_to
+    if any(return_to == origin or return_to.startswith(f"{origin}/") for origin in allowed_web_origins):
+        return return_to
+    raise HTTPException(400, "허용되지 않은 로그인 복귀 주소입니다.")
+
+
+@app.get("/auth/naver/start")
+async def naver_login_start(return_to: str = Query(...)):
+    if not NAVER_CLIENT_ID or not NAVER_CLIENT_SECRET:
+        raise HTTPException(503, "네이버 로그인이 아직 설정되지 않았습니다.")
+
+    return_url = _naver_return_url(return_to)
+    state = secrets.token_urlsafe(32)
+    store = _load_store()
+    states = store.setdefault("oauthStates", {})
+    now = int(time.time())
+    states[state] = {"provider": "naver", "returnTo": return_url, "expiresAt": now + 600}
+    for key, value in list(states.items()):
+        if int(value.get("expiresAt", 0)) < now:
+            states.pop(key, None)
+    _save_store(store)
+
+    params = urlencode({
+        "response_type": "code",
+        "client_id": NAVER_CLIENT_ID,
+        "redirect_uri": NAVER_CALLBACK_URL,
+        "state": state,
+    })
+    return RedirectResponse(f"https://nid.naver.com/oauth2.0/authorize?{params}", status_code=302)
+
+
+@app.get("/auth/naver/callback")
+async def naver_login_callback(
+    code: str | None = Query(default=None),
+    state: str | None = Query(default=None),
+    error: str | None = Query(default=None),
+    error_description: str | None = Query(default=None),
+):
+    store = _load_store()
+    state_data = store.setdefault("oauthStates", {}).pop(state or "", None)
+    _save_store(store)
+    if not state_data or state_data.get("provider") != "naver":
+        raise HTTPException(400, "로그인 요청이 만료되었거나 올바르지 않습니다.")
+    if int(state_data.get("expiresAt", 0)) < int(time.time()):
+        raise HTTPException(400, "로그인 요청이 만료되었습니다. 다시 시도해 주세요.")
+
+    return_to = _naver_return_url(str(state_data.get("returnTo") or ""))
+    if error or not code:
+        message = error_description or error or "네이버 로그인이 취소되었습니다."
+        separator = "&" if "?" in return_to else "?"
+        return RedirectResponse(
+            f"{return_to}{separator}{urlencode({'auth_error': message})}",
+            status_code=302,
+        )
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        token_response = await client.get(
+            "https://nid.naver.com/oauth2.0/token",
+            params={
+                "grant_type": "authorization_code",
+                "client_id": NAVER_CLIENT_ID,
+                "client_secret": NAVER_CLIENT_SECRET,
+                "redirect_uri": NAVER_CALLBACK_URL,
+                "code": code,
+                "state": state,
+            },
+        )
+        token_data = token_response.json()
+        access_token = str(token_data.get("access_token") or "")
+        if not token_response.is_success or not access_token:
+            raise HTTPException(502, "네이버 로그인 토큰을 발급받지 못했습니다.")
+
+        profile_response = await client.get(
+            "https://openapi.naver.com/v1/nid/me",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        profile_data = profile_response.json()
+        profile = profile_data.get("response") or {}
+        if not profile_response.is_success or profile_data.get("resultcode") != "00":
+            raise HTTPException(502, "네이버 회원 정보를 불러오지 못했습니다.")
+
+    email = str(profile.get("email") or "").strip().lower()
+    naver_user_id = str(profile.get("id") or "").strip()
+    if not email or not naver_user_id:
+        raise HTTPException(400, "네이버 계정 이메일 제공 동의가 필요합니다.")
+
+    store = _load_store()
+    user = store["users"].get(email)
+    if not user:
+        user = {
+            "email": email,
+            "createdAt": _now().isoformat(),
+            "entitlement": None,
+        }
+        store["users"][email] = user
+    user["naverUserId"] = naver_user_id
+    user["authProvider"] = "naver"
+    user["emailVerified"] = True
+
+    exchange_code = secrets.token_urlsafe(32)
+    store.setdefault("oauthCodes", {})[exchange_code] = {
+        "email": email,
+        "expiresAt": int(time.time()) + 120,
+    }
+    _save_store(store)
+    separator = "&" if "?" in return_to else "?"
+    return RedirectResponse(
+        f"{return_to}{separator}{urlencode({'naver_code': exchange_code})}",
+        status_code=302,
+    )
+
+
+@app.post("/auth/naver/exchange")
+async def naver_login_exchange(req: OAuthCodeRequest):
+    store = _load_store()
+    code_data = store.setdefault("oauthCodes", {}).pop(req.code.strip(), None)
+    _save_store(store)
+    if not code_data or int(code_data.get("expiresAt", 0)) < int(time.time()):
+        raise HTTPException(401, "로그인 코드가 만료되었거나 올바르지 않습니다.")
+
+    email = str(code_data.get("email") or "").lower()
+    user = store["users"].get(email)
+    if not user:
+        raise HTTPException(401, "로그인 계정을 찾을 수 없습니다.")
+    token = secrets.token_urlsafe(32)
+    store["sessions"][token] = email
+    _save_store(store)
+    return {"token": token, "user": _public_user(user)}
 
 
 @app.get("/me")

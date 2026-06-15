@@ -50,7 +50,7 @@ export default function PrivacyPage({ onBack }) {
           <li>Groq: 이미지 인식, 메뉴·영수증 분석, AI 질의응답</li>
           <li>DeepL: 이미지에서 추출한 텍스트의 한국어 번역</li>
           <li>Supabase: 회원 인증, 이메일 인증·비밀번호 재설정, 회원·이용권·사용량 데이터 저장</li>
-          <li>Google 및 Kakao: 이용자가 선택한 경우 소셜 로그인 인증</li>
+          <li>Google, Kakao 및 Naver: 이용자가 선택한 경우 소셜 로그인 인증</li>
           <li>Render: 백엔드 API 실행</li>
           <li>Vercel: 웹 프론트엔드 제공</li>
           <li>open.er-api.com: 환율 정보 조회</li>
