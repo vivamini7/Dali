@@ -1,0 +1,10 @@
+{
+  "appId": "com.vivamini.dalibaba",
+  "appName": "Dalibaba",
+  "webDir": "dist",
+  "backgroundColor": "#F59E0B",
+  "android": {
+    "backgroundColor": "#F59E0B",
+    "allowMixedContent": false
+  }
+}
