@@ -458,21 +458,11 @@ export default function App() {
 
   const purchasePlan = useCallback(async (planId) => {
     setAuthError('')
-    try {
-      const res = await fetch(`${API_URL}/purchase`, {
-        method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || '구매를 완료할 수 없습니다.')
-      setUser(data.user)
-      setPlans(data.plans || plans)
-      await refreshAccount()
-    } catch (e) {
-      setAuthError(typeof e.message === 'string' ? e.message : '구매를 완료할 수 없습니다.')
-    }
-  }, [authHeaders, plans, refreshAccount])
+    const plan = plans.find(item => item.id === planId)
+    setAuthError(
+      `${plan?.label || '선택한 이용권'} 결제는 Google Play 인앱결제 연결 후 사용할 수 있습니다.`
+    )
+  }, [plans])
 
   /* ── 이미지 선택 → 분석 시작 ── */
   const handleImageFile = useCallback(async (file, options = {}) => {

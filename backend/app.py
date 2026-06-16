@@ -27,6 +27,7 @@ from pydantic import BaseModel
 app = FastAPI(title="Dalibaba API")
 
 APP_ENV = os.environ.get("APP_ENV", "development").strip().lower()
+ALLOW_TEST_PURCHASES = os.environ.get("ALLOW_TEST_PURCHASES", "").strip() == "1"
 FRONTEND_ORIGINS = [
     origin.strip().rstrip("/")
     for origin in os.environ.get("FRONTEND_ORIGINS", "*").split(",")
@@ -889,8 +890,8 @@ async def verify_purchase(req: VerifyPurchaseRequest, authorization: str | None 
 @app.post("/purchase")
 async def purchase(req: PurchaseRequest, authorization: str | None = Header(default=None)):
     """개발/테스트용: 실제 결제 없이 이용권을 즉시 지급. 운영 빌드에서는 /purchase/verify를 사용할 것."""
-    if APP_ENV == "production":
-        raise HTTPException(404, "운영 환경에서는 지원하지 않는 API입니다.")
+    if APP_ENV == "production" or not ALLOW_TEST_PURCHASES:
+        raise HTTPException(404, "스토어 결제가 아직 연결되지 않았습니다.")
 
     email, user, store = _get_user_by_token(authorization)
     if not email or not user:

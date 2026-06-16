@@ -113,7 +113,7 @@ export default function SettingsPage({
             <div className="pay-sheet-header">
               <div>
                 <div className="pay-sheet-title">여행 패스 · 구독</div>
-                <div className="pay-sheet-sub">필요한 기간을 선택한 뒤 결제로 이동합니다.</div>
+                <div className="pay-sheet-sub">Google Play 인앱결제 연결 후 사용할 수 있습니다.</div>
               </div>
               <button className="pay-sheet-close" type="button" onClick={() => setPayOpen(false)}>✕</button>
             </div>
@@ -155,7 +155,7 @@ export default function SettingsPage({
               disabled={!selectedPlan || !user}
               onClick={checkout}
             >
-              {selectedPlan ? `${selectedPlan.label} 결제하기` : '요금제 선택'}
+              {selectedPlan ? `${selectedPlan.label} 준비 중` : '요금제 선택'}
             </button>
           </div>
         </div>
