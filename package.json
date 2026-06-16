@@ -1,5 +1,5 @@
 {
-  "name": "how-much-travel",
+  "name": "dalibaba",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "android:sync": "npm run build && cap sync android",
     "android:open": "cap open android",
-    "android:build": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug"
+    "android:build": "npm run android:sync && cd android && .\\gradlew.bat assembleDebug",
+    "android:bundle": "npm run android:sync && cd android && .\\gradlew.bat bundleRelease",
+    "android:signing-report": "cd android && .\\gradlew.bat signingReport"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.6",
