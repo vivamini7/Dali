@@ -48,7 +48,7 @@ export default function TermsPage({ onBack }) {
         </p>
 
         <h3>7. 문의처</h3>
-        <p>서비스 이용 문의: dalibaba.help@gmail.com</p>
+        <p>서비스 이용 문의: juneekeyun@gmail.com</p>
       </div>
     </div>
   )

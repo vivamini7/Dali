@@ -2504,6 +2504,9 @@ img { display: block; max-width: 100%; }
   font-size: 1rem; font-weight: 900; color: var(--brown);
   margin-bottom: 8px; letter-spacing: -.2px;
 }
+.settings-app-version {
+  font-size: .68rem; color: #000; text-align: center; margin-top: 4px;
+}
 
 /* 설정 언어 선택 */
 .settings-lang-picker {

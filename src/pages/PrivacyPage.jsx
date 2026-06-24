@@ -62,7 +62,7 @@ export default function PrivacyPage({ onBack }) {
         </p>
 
         <h3>7. 문의처</h3>
-        <p>개인정보 관련 문의: dalibaba.help@gmail.com</p>
+        <p>개인정보 관련 문의: juneekeyun@gmail.com</p>
       </div>
     </div>
   )

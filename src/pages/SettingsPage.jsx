@@ -248,7 +248,7 @@ export default function SettingsPage({
         </button>
         <div className="settings-row">
           <span className="settings-row-label">고객지원</span>
-          <span className="settings-row-value">dalibaba.help@gmail.com</span>
+          <span className="settings-row-value">juneekeyun@gmail.com</span>
         </div>
       </div>
 
@@ -282,28 +282,13 @@ export default function SettingsPage({
         </div>
       )}
 
-      {/* 앱 정보 */}
-      <div className="settings-card" style={{marginTop:10}}>
-        <div className="settings-row">
-          <span className="settings-row-label">앱 버전</span>
-          <span className="settings-row-value">1.0.0 BETA</span>
-        </div>
-        <div className="settings-row">
-          <span className="settings-row-label">AI 분석 엔진</span>
-          <span className="settings-row-value">Llama 4 Scout</span>
-        </div>
-        <div className="settings-row">
-          <span className="settings-row-label">환율 데이터</span>
-          <span className="settings-row-value">open.er-api.com</span>
-        </div>
-      </div>
-
       {/* 배경 다람쥐 */}
       <img src="/squirrel-peek.png" alt="" className="settings-bg-squirrel" aria-hidden="true" />
 
       {/* 앱 소개 */}
       <div className="settings-about">
         <div className="settings-about-name">Dalibaba</div>
+        <div className="settings-app-version">1.0.1 BETA</div>
       </div>
 
     </div>
