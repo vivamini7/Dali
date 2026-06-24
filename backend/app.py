@@ -44,7 +44,8 @@ app.add_middleware(
 
 GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")
 GROQ_URL      = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL    = "meta-llama/llama-4-scout-17b-16e-instruct"
+GROQ_TEXT_MODEL = os.environ.get("GROQ_TEXT_MODEL", "openai/gpt-oss-120b").strip()
+GROQ_VISION_MODEL = os.environ.get("GROQ_VISION_MODEL", "qwen/qwen3.6-27b").strip()
 
 DEEPL_API_KEY = os.environ.get("DEEPL_API_KEY", "")
 DEEPL_URL     = "https://api-free.deepl.com/v2/translate"
@@ -1052,7 +1053,7 @@ async def chat(
     messages.append({"role": "user", "content": req.message})
 
     payload = {
-        "model": GROQ_MODEL,
+        "model": GROQ_TEXT_MODEL,
         "messages": messages,
         "max_tokens": 500,
         "temperature": 0.7,
@@ -1098,7 +1099,7 @@ async def translate_items(req: TranslateItemsRequest):
 {items_text}"""
 
     payload = {
-        "model": GROQ_MODEL,
+        "model": GROQ_TEXT_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 1000,
         "temperature": 0.2,
@@ -1171,7 +1172,8 @@ async def list_client_errors(authorization: str | None = Header(default=None)):
 async def health():
     return {
         "status": "ok",
-        "model": GROQ_MODEL,
+        "model": GROQ_TEXT_MODEL,
+        "vision_model": GROQ_VISION_MODEL,
         "environment": APP_ENV,
         "storage": "postgres" if DATABASE_URL else "local-file",
     }
@@ -1209,7 +1211,7 @@ async def analyze(
 
     image_url = f"data:{req.image_type};base64,{req.image_base64}"
     payload = {
-        "model": GROQ_MODEL,
+        "model": GROQ_VISION_MODEL,
         "messages": [{
             "role": "user",
             "content": [
@@ -1219,6 +1221,7 @@ async def analyze(
         }],
         "max_tokens": 4000,
         "temperature": 0.1,
+        "reasoning_effort": "none",
     }
 
     try:
@@ -1312,7 +1315,7 @@ async def translate_image(
         # 1. Groq 비전 호출 → OCR만 (텍스트 위치 감지)
         image_url = f"data:{req.image_type};base64,{req.image_base64}"
         payload = {
-            "model": GROQ_MODEL,
+            "model": GROQ_VISION_MODEL,
             "messages": [{
                 "role": "user",
                 "content": [
@@ -1322,6 +1325,7 @@ async def translate_image(
             }],
             "max_tokens": 2000,
             "temperature": 0.1,
+            "reasoning_effort": "none",
         }
 
         async with httpx.AsyncClient(timeout=60.0) as client:

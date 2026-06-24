@@ -29,6 +29,10 @@ services:
         value: https://dalibaba-api.onrender.com/auth/naver/callback
       - key: GROQ_API_KEY
         sync: false
+      - key: GROQ_TEXT_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_VISION_MODEL
+        value: qwen/qwen3.6-27b
       - key: DEEPL_API_KEY
         sync: false
       - key: ADMIN_TOKEN
