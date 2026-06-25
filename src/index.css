@@ -2281,12 +2281,13 @@ img { display: block; max-width: 100%; }
 
 .ex-currency-picker {
   position: relative;
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; gap: 4px;
   flex-shrink: 0;
+  margin-left: auto;
   border-radius: var(--r-full);
-  padding: 7px 9px;
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px rgba(232,221,208,.7);
+  padding: 0;
+  background: none;
+  box-shadow: none;
   cursor: pointer;
 }
 
@@ -3533,11 +3534,11 @@ body,
 }
 
 .home-tools-grid .ex-currency-picker {
-  padding: 6px 8px;
+  padding: 0;
   gap: 4px;
-  border: 1px solid var(--border-2);
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(122,77,43,.06);
+  border: none;
+  background: none;
+  box-shadow: none;
 }
 
 .home-tools-grid .ex-currency-flag {
@@ -3553,22 +3554,19 @@ body,
 }
 
 .ex-picker-chevron {
-  width: 18px;
-  height: 18px;
+  width: 12px;
+  height: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 18px;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--brown);
-  box-shadow: inset 0 0 0 1px var(--border-2);
-  transition: transform .16s ease, background .16s ease;
+  flex: 0 0 12px;
+  color: var(--text-3);
+  transition: transform .16s ease;
 }
 
 .ex-picker-chevron svg {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.4;
@@ -3650,7 +3648,7 @@ body,
 }
 
 .home-tools-grid + .home-cta-card {
-  margin-top: 10px;
+  margin-top: 18px;
 }
 
 .home-action-card {
