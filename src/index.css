@@ -3371,7 +3371,7 @@ body,
 }
 
 .home-tools-grid .home-rate-card {
-  padding: 10px;
+  padding: 10px 10px 8px;
   min-width: 0;
 }
 
@@ -3391,7 +3391,7 @@ body,
 }
 
 .home-rate-slider {
-  min-height: 78px;
+  min-height: 60px;
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) 24px;
   align-items: center;
@@ -3430,7 +3430,7 @@ body,
 
 .home-rate-slide {
   min-width: 0;
-  padding: 7px 0;
+  padding: 4px 0;
   animation: rateFadeIn .18s ease both;
 }
 
@@ -3504,7 +3504,7 @@ body,
   display: flex;
   justify-content: center;
   gap: 4px;
-  margin-top: 6px;
+  margin-top: 3px;
 }
 
 .home-rate-dots span {
