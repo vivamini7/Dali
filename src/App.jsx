@@ -149,6 +149,7 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [plans, setPlans] = useState([])
   const [aiUsage, setAiUsage] = useState(null)
+  const [imageUsage, setImageUsage] = useState(null)
   const [authError, setAuthError] = useState('')
   const [authNotice, setAuthNotice] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
@@ -175,8 +176,10 @@ export default function App() {
       setUser(data.user || null)
       setPlans(data.plans || [])
       setAiUsage(data.usage || null)
+      setImageUsage(data.imageUsage || null)
     } catch {
       setAiUsage(null)
+      setImageUsage(null)
     }
   }, [authHeaders])
 
@@ -486,12 +489,15 @@ export default function App() {
       console.log('[Dalibaba] /analyze 응답:', res.status)
       if (!res.ok) {
         const fallback = res.status === 429
-          ? 'AI 분석 요청이 많습니다. 잠시 후 다시 시도해주세요.'
-          : '이미지 분석에 실패했습니다. 잠시 후 다시 시도해주세요.'
+          ? '오늘 사용 가능한 촬영/분석 횟수를 모두 사용했습니다. 내일 다시 시도해주세요.'
+          : res.status === 401
+            ? '로그인이 필요한 기능입니다.'
+            : '이미지 분석에 실패했습니다. 잠시 후 다시 시도해주세요.'
         throw new Error(await getApiError(res, fallback))
       }
       let data = await res.json()
       console.log('[Dalibaba] 분석 결과:', data)
+      if (data?.imageUsage) setImageUsage(data.imageUsage)
 
       if (data?.documentType === 'other') {
         try {
@@ -630,7 +636,6 @@ export default function App() {
         />
       ) : screen === 'settings' ? (
         <SettingsPage
-          sourceLang={sourceLang} onSourceLangChange={setSourceLang}
           defaultCurrency={defaultCurrency} onDefaultCurrencyChange={setDefaultCurrency}
           cardFee={cardFee} onCardFeeChange={setCardFee}
           user={user}
@@ -663,6 +668,7 @@ export default function App() {
           defaultCurrency={defaultCurrency}
           user={user}
           aiUsage={aiUsage}
+          imageUsage={imageUsage}
           authError={authError}
           authNotice={authNotice}
           authLoading={authLoading}

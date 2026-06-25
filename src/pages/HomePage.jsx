@@ -49,6 +49,7 @@ export default function HomePage({
   defaultCurrency,
   user,
   aiUsage,
+  imageUsage,
   authError,
   authNotice,
   authLoading,
@@ -163,6 +164,17 @@ export default function HomePage({
           <SettingsGearIcon />
         </button>
       </div>
+
+      {user && (imageUsage || aiUsage) && (
+        <div className="home-usage-row">
+          {imageUsage && (
+            <span className="home-usage-pill">촬영/분석 {imageUsage.remaining}/{imageUsage.limit}</span>
+          )}
+          {aiUsage && (
+            <span className="home-usage-pill">AI 질문 {aiUsage.remaining}/{aiUsage.limit}</span>
+          )}
+        </div>
+      )}
 
       {authOpen && (
         <div className="home-auth-overlay" onClick={() => setAuthOpen(false)}>
@@ -367,7 +379,7 @@ export default function HomePage({
 
       <div className="home-action-card">
         <div className="home-cta-btns">
-          <button className="home-cta-btn" onClick={() => cameraRef.current?.click()}>
+          <button className="home-cta-btn" onClick={() => (user ? cameraRef.current?.click() : setAuthOpen(true))}>
             촬영하기
           </button>
           <input
@@ -378,7 +390,7 @@ export default function HomePage({
             style={{ display: 'none' }}
             onChange={handleCameraFile}
           />
-          <button className="home-cta-btn gallery" onClick={() => galleryRef.current?.click()}>
+          <button className="home-cta-btn gallery" onClick={() => (user ? galleryRef.current?.click() : setAuthOpen(true))}>
             앨범에서 선택
           </button>
           <input

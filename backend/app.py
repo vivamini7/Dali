@@ -65,10 +65,12 @@ KST = timezone(timedelta(hours=9))
 DATA_DIR = Path(__file__).resolve().parent / "data"
 STORE_PATH = DATA_DIR / "store.json"
 FREE_DAILY_AI_LIMIT = 3
-PAID_DAILY_AI_LIMIT = 100
-GUEST_DAILY_IMAGE_LIMIT = int(os.environ.get("GUEST_DAILY_IMAGE_LIMIT", "5"))
-FREE_DAILY_IMAGE_LIMIT = int(os.environ.get("FREE_DAILY_IMAGE_LIMIT", "10"))
-PAID_DAILY_IMAGE_LIMIT = int(os.environ.get("PAID_DAILY_IMAGE_LIMIT", "100"))
+PAID_DAILY_AI_LIMIT = 15
+PREMIUM_DAILY_AI_LIMIT = 30
+
+FREE_DAILY_IMAGE_LIMIT = 1
+PAID_DAILY_IMAGE_LIMIT = 5
+PREMIUM_DAILY_IMAGE_LIMIT = 10
 
 PLANS = [
     {"id": "pass_1d", "kind": "pass", "days": 1, "label": "1일권", "priceUsd": 1.99},
@@ -76,7 +78,17 @@ PLANS = [
     {"id": "pass_7d", "kind": "pass", "days": 7, "label": "7일권", "priceUsd": 7.99},
     {"id": "sub_month", "kind": "subscription", "days": 30, "label": "월 구독", "priceUsd": 8.99},
     {"id": "sub_year", "kind": "subscription", "days": 365, "label": "연 구독", "priceUsd": 59.99},
+    {"id": "premium_month", "kind": "premium", "days": 30, "label": "프리미엄 월 구독", "priceUsd": 14.99},
+    {"id": "premium_year", "kind": "premium", "days": 365, "label": "프리미엄 연 구독", "priceUsd": 99.99},
 ]
+
+
+def _entitlement_tier(entitlement: dict | None) -> str:
+    if not entitlement:
+        return "free"
+    if entitlement.get("kind") == "premium":
+        return "premium"
+    return "paid"
 
 
 def _now() -> datetime:
@@ -239,7 +251,8 @@ def _usage_identity(user_email: str | None, guest_id: str | None) -> str:
 
 def _usage_status(store: dict, identity: str, user: dict | None) -> dict:
     entitlement = _active_entitlement(user)
-    limit = PAID_DAILY_AI_LIMIT if entitlement else FREE_DAILY_AI_LIMIT
+    tier = _entitlement_tier(entitlement)
+    limit = {"free": FREE_DAILY_AI_LIMIT, "paid": PAID_DAILY_AI_LIMIT, "premium": PREMIUM_DAILY_AI_LIMIT}[tier]
     date_key = _today_key()
     bucket = store.setdefault("usage", {}).setdefault(identity, {})
     used = int(bucket.get(date_key, 0))
@@ -254,12 +267,8 @@ def _usage_status(store: dict, identity: str, user: dict | None) -> dict:
 
 def _image_usage_status(store: dict, identity: str, user: dict | None) -> dict:
     entitlement = _active_entitlement(user)
-    if entitlement:
-        limit = PAID_DAILY_IMAGE_LIMIT
-    elif user:
-        limit = FREE_DAILY_IMAGE_LIMIT
-    else:
-        limit = GUEST_DAILY_IMAGE_LIMIT
+    tier = _entitlement_tier(entitlement)
+    limit = {"free": FREE_DAILY_IMAGE_LIMIT, "paid": PAID_DAILY_IMAGE_LIMIT, "premium": PREMIUM_DAILY_IMAGE_LIMIT}[tier]
 
     date_key = _today_key()
     bucket = store.setdefault("imageUsage", {}).setdefault(identity, {})
@@ -1027,13 +1036,15 @@ async def chat(
         raise HTTPException(500, "서버에 GROQ_API_KEY가 설정되지 않았습니다.")
 
     email, user, store = _get_user_by_token(authorization)
+    if not email or not user:
+        raise HTTPException(401, "로그인이 필요한 기능입니다.")
     identity = _usage_identity(email, x_guest_id)
     usage = _usage_status(store, identity, user)
     if usage["remaining"] <= 0:
         raise HTTPException(
             429,
             {
-                "message": "오늘 무료 AI 질문 3회를 모두 사용했습니다.",
+                "message": f"오늘 AI 질문 {usage['limit']}회를 모두 사용했습니다. 내일 다시 이용해주세요.",
                 "usage": usage,
             },
         )
@@ -1197,6 +1208,8 @@ async def analyze(
         raise HTTPException(500, "서버에 GROQ_API_KEY가 설정되지 않았습니다.")
 
     email, user, store = _get_user_by_token(authorization)
+    if not email or not user:
+        raise HTTPException(401, "로그인이 필요한 기능입니다.")
     identity = _usage_identity(email, x_guest_id)
     image_usage = _image_usage_status(store, identity, user)
     if image_usage["remaining"] <= 0:
@@ -1297,6 +1310,8 @@ async def translate_image(
         raise HTTPException(500, "서버에 GROQ_API_KEY가 설정되지 않았습니다.")
 
     email, user, store = _get_user_by_token(authorization)
+    if not email or not user:
+        raise HTTPException(401, "로그인이 필요한 기능입니다.")
     identity = _usage_identity(email, x_guest_id)
     date_key = _today_key()
     analyzed = int(store.setdefault("imageUsage", {}).setdefault(identity, {}).get(date_key, 0))

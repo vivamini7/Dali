@@ -74,10 +74,7 @@ export default function ExchangePage({ embedded = false, defaultCurrency = 'JPY'
             aria-expanded={pickerOpen}
           >
             <span className="ex-currency-flag">{current.flag}</span>
-            <div>
-              <div className="ex-currency-name">{current.name}</div>
-              <div className="ex-currency-code">{current.code}</div>
-            </div>
+            <div className="ex-currency-name">- {current.country || current.name}</div>
             <span className="ex-picker-chevron" aria-hidden="true">
               <svg viewBox="0 0 24 24">
                 <path d="M6 9l6 6 6-6" />
@@ -97,7 +94,7 @@ export default function ExchangePage({ embedded = false, defaultCurrency = 'JPY'
                     setPickerOpen(false)
                   }}
                 >
-                  <strong>{item.name}</strong>
+                  <strong>{item.flag} - {item.country || item.name}</strong>
                   <em>{fmtUnitRate(rates, item.code)}</em>
                 </button>
               ))}

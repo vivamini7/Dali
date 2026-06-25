@@ -2,22 +2,7 @@ import { useState } from 'react'
 import StaticLogoHeader from '../components/StaticLogoHeader'
 import { EXCHANGE_CURRENCIES } from '../data/currencies'
 
-const LANGS = [
-  { code: 'auto', label: '자동 감지', flag: '🌐' },
-  { code: 'ja',   label: '일본어',   flag: '🇯🇵' },
-  { code: 'zh',   label: '중국어',   flag: '🇨🇳' },
-  { code: 'en',   label: '영어',     flag: '🇺🇸' },
-  { code: 'th',   label: '태국어',   flag: '🇹🇭' },
-  { code: 'vi',   label: '베트남어', flag: '🇻🇳' },
-  { code: 'fr',   label: '프랑스어', flag: '🇫🇷' },
-  { code: 'de',   label: '독일어',   flag: '🇩🇪' },
-  { code: 'es',   label: '스페인어', flag: '🇪🇸' },
-  { code: 'it',   label: '이탈리아어', flag: '🇮🇹' },
-]
-
 export default function SettingsPage({
-  sourceLang,
-  onSourceLangChange,
   defaultCurrency,
   onDefaultCurrencyChange,
   cardFee,
@@ -40,6 +25,7 @@ export default function SettingsPage({
   const activePlan = user?.entitlement
   const passPlans = plans.filter(plan => plan.kind === 'pass')
   const subscriptionPlans = plans.filter(plan => plan.kind === 'subscription')
+  const premiumPlans = plans.filter(plan => plan.kind === 'premium')
   const selectedPlan = plans.find(plan => plan.id === selectedPlanId) || plans[0]
   const expiresLabel = activePlan?.expiresAt
     ? new Date(activePlan.expiresAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
@@ -72,40 +58,20 @@ export default function SettingsPage({
         <StaticLogoHeader />
       </div>
 
-      <div className="settings-card" style={{marginTop:10}}>
-        <div className="plan-status">
-          <div>
-            <div className="settings-section-title">AI 질문</div>
-            <div className="settings-row-hint">
-              무료 사용자는 하루 3회까지 질문할 수 있습니다.
-            </div>
-          </div>
-          <strong>{aiUsage ? `${aiUsage.remaining}/${aiUsage.limit}` : '3/3'}</strong>
+      <div className="settings-row-2col">
+        <div className="settings-mini-card">
+          <div className="settings-mini-title">AI 질문</div>
+          <div className="settings-mini-value">{aiUsage ? `${aiUsage.remaining}/${aiUsage.limit}` : '3/3'}</div>
+          <div className="settings-mini-hint">무료 하루 3회</div>
         </div>
-        {activePlan && (
-          <div className="plan-active-banner">
-            {activePlan.label} · {expiresLabel}까지 활성화
-          </div>
-        )}
-      </div>
 
-      <div className="settings-card" style={{marginTop:10}}>
-        <button className="settings-pay-entry" type="button" onClick={openPaySheet}>
-          <div>
-            <div className="settings-section-title">여행 패스 · 구독</div>
-            <div className="settings-row-hint">
-              {activePlan ? `${activePlan.label} 활성화됨` : '여행 기간권 또는 구독권을 선택합니다.'}
-            </div>
-          </div>
-          <span className="settings-pay-entry-action">
-            선택
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 6l6 6-6 6" />
-            </svg>
-          </span>
+        <button className="settings-mini-card settings-mini-btn" type="button" onClick={openPaySheet}>
+          <div className="settings-mini-title">여행 패스 · 구독</div>
+          <div className="settings-mini-value">{activePlan ? activePlan.label : '선택하기'}</div>
+          <div className="settings-mini-hint">{activePlan ? `${expiresLabel}까지` : '구매 / 구독'}</div>
         </button>
-        {authError && user && <div className="settings-error-text inside">{authError}</div>}
       </div>
+      {authError && user && <div className="settings-error-text inside" style={{margin:'8px 16px 0'}}>{authError}</div>}
 
       {payOpen && (
         <div className="pay-sheet-overlay" onClick={() => setPayOpen(false)}>
@@ -118,7 +84,7 @@ export default function SettingsPage({
               <button className="pay-sheet-close" type="button" onClick={() => setPayOpen(false)}>✕</button>
             </div>
 
-            <div className="pay-section-label">여행 패스</div>
+            <div className="pay-section-label">여행 패스 (촬영/분석 5회 · AI 질문 15회)</div>
             <div className="pay-plan-grid">
               {passPlans.map(plan => (
                 <button
@@ -133,9 +99,24 @@ export default function SettingsPage({
               ))}
             </div>
 
-            <div className="pay-section-label">구독</div>
+            <div className="pay-section-label">구독 (촬영/분석 5회 · AI 질문 15회)</div>
             <div className="pay-subscription-list">
               {subscriptionPlans.map(plan => (
+                <button
+                  key={plan.id}
+                  type="button"
+                  className={`pay-subscription-option ${selectedPlan?.id === plan.id ? 'active' : ''}`}
+                  onClick={() => setSelectedPlanId(plan.id)}
+                >
+                  <span>{plan.label}</span>
+                  <strong>${plan.priceUsd.toFixed(2)}</strong>
+                </button>
+              ))}
+            </div>
+
+            <div className="pay-section-label">프리미엄 (촬영/분석 10회 · AI 질문 30회)</div>
+            <div className="pay-subscription-list">
+              {premiumPlans.map(plan => (
                 <button
                   key={plan.id}
                   type="button"
@@ -161,34 +142,8 @@ export default function SettingsPage({
         </div>
       )}
 
-      {/* 메뉴판 언어 */}
-      <div className="settings-card">
-        <div className="settings-row">
-          <span className="settings-row-label">메뉴판 언어</span>
-          <div className="settings-lang-picker">
-            <span className="settings-lang-flag-cur">
-              {LANGS.find(l => l.code === sourceLang)?.flag}
-            </span>
-            <span className="settings-lang-name-cur">
-              {LANGS.find(l => l.code === sourceLang)?.label}
-            </span>
-            <span className="settings-lang-arrow">›</span>
-            <select
-              value={sourceLang}
-              onChange={e => onSourceLangChange(e.target.value)}
-              className="settings-lang-native-select"
-              aria-label="메뉴판 언어 선택"
-            >
-              {LANGS.map(l => (
-                <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* 기본 설정 */}
-      <div className="settings-card" style={{marginTop:10}}>
+      <div className="settings-card">
         <div className="settings-row">
           <span className="settings-row-label">번역 언어</span>
           <span className="settings-row-value">한국어</span>
