@@ -2281,22 +2281,21 @@ img { display: block; max-width: 100%; }
 
 .ex-currency-picker {
   position: relative;
-  display: flex; align-items: center; gap: 8px;
-  width: 100%;
-  min-width: 0;
-  border-radius: var(--r-md);
-  padding: 12px;
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px rgba(232,221,208,.55);
+  display: flex; align-items: center; gap: 5px;
+  flex-shrink: 0;
+  border-radius: var(--r-full);
+  padding: 7px 9px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px rgba(232,221,208,.7);
   cursor: pointer;
 }
 
 .ex-picker-chevron {
-  margin-left: auto;
   color: var(--text-3);
-  font-size: 1rem;
+  font-size: .85rem;
   transition: transform .14s;
 }
+.ex-picker-chevron svg { width: 14px; height: 14px; }
 
 .ex-currency-native-select {
   position: absolute;
@@ -2306,9 +2305,10 @@ img { display: block; max-width: 100%; }
   opacity: 0;
   cursor: pointer;
 }
-.ex-currency-flag { font-size: 1.4rem; flex-shrink: 0; }
+.ex-currency-flag { font-size: 1.1rem; flex-shrink: 0; }
 .ex-currency-name {
-  font-size: .82rem; font-weight: 700; color: var(--text);
+  font-size: .8rem; font-weight: 800; color: var(--text);
+  white-space: nowrap;
 }
 .ex-currency-code {
   font-size: .62rem; color: var(--text-3); margin-top: 1px;
@@ -2320,7 +2320,7 @@ img { display: block; max-width: 100%; }
   background: var(--surface-2);
   border: 1.5px solid var(--border);
   border-radius: var(--r-md);
-  padding: 0 12px;
+  padding: 0 8px 0 12px;
   gap: 6px;
 }
 .ex-num-input {
@@ -3533,20 +3533,19 @@ body,
 }
 
 .home-tools-grid .ex-currency-picker {
-  min-height: 44px;
-  padding: 12px;
-  gap: 6px;
+  padding: 6px 8px;
+  gap: 4px;
   border: 1px solid var(--border-2);
   background: #fff;
   box-shadow: 0 4px 12px rgba(122,77,43,.06);
 }
 
 .home-tools-grid .ex-currency-flag {
-  font-size: 1.08rem;
+  font-size: 1rem;
 }
 
 .home-tools-grid .ex-currency-name {
-  font-size: .74rem;
+  font-size: .7rem;
 }
 
 .ex-currency-picker.open .ex-picker-chevron {
@@ -3554,13 +3553,12 @@ body,
 }
 
 .ex-picker-chevron {
-  width: 26px;
-  height: 26px;
-  margin-left: auto;
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 26px;
+  flex: 0 0 18px;
   border-radius: 999px;
   background: var(--surface);
   color: var(--brown);
@@ -3569,8 +3567,8 @@ body,
 }
 
 .ex-picker-chevron svg {
-  width: 15px;
-  height: 15px;
+  width: 11px;
+  height: 11px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2.4;

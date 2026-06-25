@@ -66,21 +66,31 @@ export default function ExchangePage({ embedded = false, defaultCurrency = 'JPY'
 
       <div className="ex-converter-card">
         <div className="ex-currency-stepper">
-          <button
-            className={`ex-currency-picker ${pickerOpen ? 'open' : ''}`}
-            type="button"
-            onClick={() => setPickerOpen(open => !open)}
-            aria-label="환율 통화 선택"
-            aria-expanded={pickerOpen}
-          >
-            <span className="ex-currency-flag">{current.flag}</span>
-            <div className="ex-currency-name">- {current.country || current.name}</div>
-            <span className="ex-picker-chevron" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            </span>
-          </button>
+          <div className="ex-input-row">
+            <input
+              type="number"
+              value={amount}
+              onChange={event => setAmount(event.target.value)}
+              className="ex-num-input"
+              inputMode="decimal"
+              placeholder="0"
+            />
+            <button
+              className={`ex-currency-picker ${pickerOpen ? 'open' : ''}`}
+              type="button"
+              onClick={() => setPickerOpen(open => !open)}
+              aria-label="환율 통화 선택"
+              aria-expanded={pickerOpen}
+            >
+              <span className="ex-currency-flag">{current.flag}</span>
+              <span className="ex-currency-name">{current.code}</span>
+              <span className="ex-picker-chevron" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </span>
+            </button>
+          </div>
 
           {pickerOpen && (
             <div className="ex-currency-menu">
@@ -100,18 +110,6 @@ export default function ExchangePage({ embedded = false, defaultCurrency = 'JPY'
               ))}
             </div>
           )}
-        </div>
-
-        <div className="ex-input-row">
-          <input
-            type="number"
-            value={amount}
-            onChange={event => setAmount(event.target.value)}
-            className="ex-num-input"
-            inputMode="decimal"
-            placeholder="0"
-          />
-          <span className="ex-input-unit">{current.code}</span>
         </div>
 
         <div className="ex-divider" />
