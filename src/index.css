@@ -2273,6 +2273,13 @@ img { display: block; max-width: 100%; }
 }
 
 /* 통화 이름 라벨 */
+.ex-card-title {
+  font-size: .72rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
 .ex-currency-stepper {
   position: relative;
   display: block;
@@ -3629,13 +3636,14 @@ body,
 }
 
 .home-tools-grid .ex-input-row {
-  margin-top: 9px;
-  min-height: 38px;
+  margin-top: 4px;
+  min-height: 30px;
   padding: 0 10px;
 }
 
 .home-tools-grid .ex-num-input {
   font-size: 1rem;
+  padding: 5px 0;
 }
 
 .home-tools-grid .ex-krw-label {

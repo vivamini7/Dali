@@ -65,6 +65,7 @@ export default function ExchangePage({ embedded = false, defaultCurrency = 'JPY'
       )}
 
       <div className="ex-converter-card">
+        {embedded && <div className="ex-card-title">계산기</div>}
         <div className="ex-currency-stepper">
           <div className="ex-input-row">
             <input
