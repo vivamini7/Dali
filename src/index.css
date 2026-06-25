@@ -3372,12 +3372,12 @@ body,
 }
 
 .home-tools-grid .home-rate-card {
-  padding: 10px 10px 8px;
+  padding: 10px 10px 4px;
   min-width: 0;
 }
 
 .home-tools-grid .home-rate-header {
-  margin-bottom: 5px;
+  margin-bottom: 13px;
   align-items: flex-start;
   gap: 6px;
 }
@@ -3505,7 +3505,7 @@ body,
   display: flex;
   justify-content: center;
   gap: 4px;
-  margin-top: 3px;
+  margin-top: 0;
 }
 
 .home-rate-dots span {
