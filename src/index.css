@@ -3362,7 +3362,7 @@ body,
   width: auto;
   max-width: none;
   margin: 8px 14px 0;
-  align-items: start;
+  align-items: end;
 }
 
 .home-tools-grid .home-rate-card,
