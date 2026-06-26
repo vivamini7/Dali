@@ -3379,12 +3379,12 @@ body,
 }
 
 .home-tools-grid .home-rate-card {
-  padding: 10px 10px 4px;
+  padding: 12px 10px 2px;
   min-width: 0;
 }
 
 .home-tools-grid .home-rate-header {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   align-items: flex-start;
   gap: 6px;
 }
@@ -3438,7 +3438,7 @@ body,
 
 .home-rate-slide {
   min-width: 0;
-  padding: 10px 0;
+  padding: 9px 0;
   animation: rateFadeIn .18s ease both;
 }
 
