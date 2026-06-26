@@ -1,7 +1,14 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { Capacitor } from '@capacitor/core'
+import { StatusBar, Style } from '@capacitor/status-bar'
 import App from './App.jsx'
 import './index.css'
+
+if (Capacitor.isNativePlatform()) {
+  StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {})
+  StatusBar.setStyle({ style: Style.Light }).catch(() => {})
+}
 
 /* ── 전역 오류 수집 ── */
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7860'
