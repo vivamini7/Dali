@@ -1433,6 +1433,9 @@ img { display: block; max-width: 100%; }
   color: var(--brown);
   box-shadow: var(--shadow-xs);
 }
+.home-auth-modal .auth-toggle {
+  margin: 2px 0 14px;
+}
 .settings-text-input {
   width: 100%;
   min-height: 42px;

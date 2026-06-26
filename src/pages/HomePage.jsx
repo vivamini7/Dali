@@ -69,7 +69,6 @@ export default function HomePage({
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authOpen, setAuthOpen] = useState(false)
-  const [rememberLogin, setRememberLogin] = useState(() => localStorage.getItem('dalibaba_remember_login') === '1')
   const cameraRef = useRef(null)
   const galleryRef = useRef(null)
 
@@ -113,19 +112,13 @@ export default function HomePage({
       onPasswordUpdate?.(password)
       return
     }
-    if (rememberLogin) {
-      localStorage.setItem('dalibaba_remember_login', '1')
-      localStorage.setItem('dalibaba_saved_email', email)
-    } else {
-      localStorage.removeItem('dalibaba_remember_login')
-      localStorage.removeItem('dalibaba_saved_email')
-    }
-    onAuthSubmit?.(authMode, email, password, rememberLogin)
+    localStorage.setItem('dalibaba_saved_email', email)
+    onAuthSubmit?.(authMode, email, password, true)
   }
 
   useEffect(() => {
-    if (rememberLogin) setEmail(localStorage.getItem('dalibaba_saved_email') || '')
-  }, [rememberLogin])
+    setEmail(localStorage.getItem('dalibaba_saved_email') || '')
+  }, [])
 
   useEffect(() => {
     if (user) setAuthOpen(false)
@@ -188,6 +181,25 @@ export default function HomePage({
             </div>
 
             {!passwordRecovery && (
+              <div className="auth-toggle">
+                <button
+                  type="button"
+                  className={authMode === 'login' ? 'active' : ''}
+                  onClick={() => setAuthMode('login')}
+                >
+                  로그인
+                </button>
+                <button
+                  type="button"
+                  className={authMode === 'register' ? 'active' : ''}
+                  onClick={() => setAuthMode('register')}
+                >
+                  회원가입
+                </button>
+              </div>
+            )}
+
+            {!passwordRecovery && (
               <>
                 <div className="social-login-list">
                   <button type="button" className="social-login-btn google" onClick={() => onSocialLogin?.('google')} aria-label="Google 계정으로 계속">
@@ -230,16 +242,6 @@ export default function HomePage({
                 required
               />
             </div>
-            {!passwordRecovery && (
-              <label className="home-remember-row">
-                <input
-                  type="checkbox"
-                  checked={rememberLogin}
-                  onChange={e => setRememberLogin(e.target.checked)}
-                />
-                <span>로그인 정보 저장하기</span>
-              </label>
-            )}
             {authError && <div className="home-auth-error">{authError}</div>}
             {authNotice && <div className="home-auth-info">{authNotice}</div>}
             <button className="home-auth-submit" type="submit" disabled={authLoading}>
@@ -259,15 +261,6 @@ export default function HomePage({
                 onClick={() => onPasswordReset?.(email)}
               >
                 비밀번호를 잊으셨나요?
-              </button>
-            )}
-            {!passwordRecovery && (
-              <button
-                className="home-auth-switch"
-                type="button"
-                onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-              >
-                {authMode === 'login' ? '이메일로 회원가입하기' : '이미 계정이 있어요. 로그인하기'}
               </button>
             )}
           </form>
