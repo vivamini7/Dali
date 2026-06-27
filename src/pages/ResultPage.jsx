@@ -273,7 +273,9 @@ export default function ResultPage({
   const [usdRates,   setUsdRates] = useState({})
   const [chatOpen,   setChatOpen] = useState(false)
   const [activeCat,  setActiveCat] = useState('all')
-  const addMenuRef = useRef(null)
+  const addMenuCameraRef = useRef(null)
+  const addMenuGalleryRef = useRef(null)
+  const [addMenuChoiceOpen, setAddMenuChoiceOpen] = useState(false)
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/USD')
@@ -407,7 +409,7 @@ export default function ResultPage({
       {/* 감지 배너 */}
       <div className="result-detect-bar">
         <span className="result-detect-badge">{flag} {detected} · {currency}</span>
-        <button className="result-add-menu-inline" onClick={() => addMenuRef.current?.click()}>
+        <button className="result-add-menu-inline" onClick={() => setAddMenuChoiceOpen(true)}>
           메뉴 추가하기
         </button>
       </div>
@@ -507,11 +509,44 @@ export default function ResultPage({
         />
       )}
 
+      {addMenuChoiceOpen && (
+        <div className="add-menu-choice-overlay" onClick={() => setAddMenuChoiceOpen(false)}>
+          <div className="add-menu-choice-sheet" onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => { setAddMenuChoiceOpen(false); addMenuCameraRef.current?.click() }}
+            >
+              촬영하기
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAddMenuChoiceOpen(false); addMenuGalleryRef.current?.click() }}
+            >
+              앨범에서 선택
+            </button>
+            <button
+              type="button"
+              className="add-menu-choice-cancel"
+              onClick={() => setAddMenuChoiceOpen(false)}
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+
       <input
-        ref={addMenuRef}
+        ref={addMenuCameraRef}
         type="file"
         accept="image/*"
         capture="environment"
+        style={{ display: 'none' }}
+        onChange={handleAddMenu}
+      />
+      <input
+        ref={addMenuGalleryRef}
+        type="file"
+        accept="image/*"
         style={{ display: 'none' }}
         onChange={handleAddMenu}
       />

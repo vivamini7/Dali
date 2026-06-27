@@ -218,7 +218,7 @@ img { display: block; max-width: 100%; }
 
 .home-profile-panel {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + 56px);
+  top: 56px;
   right: 18px;
   z-index: 601;
   width: 220px;
@@ -230,12 +230,49 @@ img { display: block; max-width: 100%; }
 }
 
 .home-profile-email {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   font-size: .78rem;
   font-weight: 800;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.home-profile-name-hint {
+  flex-shrink: 0;
+  font-size: .64rem;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.home-profile-name-edit {
+  display: flex;
+  gap: 6px;
+}
+
+.home-profile-name-edit input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-2);
+  font-size: .76rem;
+}
+
+.home-profile-name-edit button {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--brown);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 800;
 }
 
 .home-profile-plan {
@@ -1054,7 +1091,6 @@ img { display: block; max-width: 100%; }
   position: sticky; top: 0; z-index: 50;
   background: var(--surface);
   padding: 14px 20px 13px;
-  padding-top: max(14px, env(safe-area-inset-top));
   display: flex; align-items: center; gap: 10px;
   border-bottom: 1px solid var(--border-2);
   box-shadow: 0 1px 8px rgba(120,53,15,.06);
@@ -1247,7 +1283,6 @@ img { display: block; max-width: 100%; }
 .exchange-header {
   background: var(--surface);
   padding: 16px 20px 14px;
-  padding-top: max(16px, env(safe-area-inset-top));
   border-bottom: 1px solid var(--border-2);
   display: flex; align-items: center; justify-content: space-between;
 }
@@ -1771,16 +1806,24 @@ img { display: block; max-width: 100%; }
 }
 .pay-checkout-btn {
   width: 100%;
-  min-height: 50px;
+  min-height: 56px;
   margin-top: 14px;
-  border-radius: 15px;
-  background: var(--brown);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #7A4D2B 0%, #A16A3A 100%);
   color: #fff;
-  font-size: .9rem;
+  font-size: 1rem;
   font-weight: 900;
+  letter-spacing: -.2px;
+  box-shadow: 0 10px 24px rgba(122,77,43,.32);
+  transition: transform .12s, box-shadow .12s;
+}
+.pay-checkout-btn:active {
+  transform: scale(.98);
+  box-shadow: 0 6px 14px rgba(122,77,43,.22);
 }
 .pay-checkout-btn:disabled {
-  opacity: .45;
+  opacity: .4;
+  box-shadow: none;
 }
 .settings-back-btn {
   width: 34px;
@@ -1970,7 +2013,6 @@ img { display: block; max-width: 100%; }
   position: sticky; top: 0; z-index: 50;
   background: var(--surface);
   padding: 12px 16px 11px;
-  padding-top: max(12px, env(safe-area-inset-top));
   display: flex; align-items: center; gap: 10px;
   border-bottom: 1px solid var(--border-2);
   box-shadow: 0 1px 8px rgba(120,53,15,.06);
@@ -3826,6 +3868,43 @@ body,
 
 .result-add-menu-inline:active {
   transform: scale(.96);
+}
+
+.add-menu-choice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 650;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(25,21,18,.28);
+}
+
+.add-menu-choice-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.add-menu-choice-sheet button {
+  height: 48px;
+  border-radius: 14px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-2);
+  color: var(--text);
+  font-size: .92rem;
+  font-weight: 800;
+}
+
+.add-menu-choice-sheet button.add-menu-choice-cancel {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
 }
 
 .order-phrase-card {

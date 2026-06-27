@@ -69,10 +69,24 @@ export default function HomePage({
   passwordRecovery,
   onSocialLogin,
   onLogout,
+  onUpdateName,
 }) {
   const [profileOpen, setProfileOpen] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState('')
   const activePlan = user?.entitlement
   const activePlanLabel = activePlan?.label || '무료 플랜'
+
+  const startEditName = () => {
+    setNameInput(user?.name || '')
+    setEditingName(true)
+  }
+
+  const saveName = () => {
+    const trimmed = nameInput.trim()
+    if (trimmed) onUpdateName?.(trimmed)
+    setEditingName(false)
+  }
   const [rates,     setRates]     = useState({})
   const [rateDate,  setRateDate]  = useState(null)
   const [loading,   setLoading]   = useState(true)
@@ -170,13 +184,30 @@ export default function HomePage({
             </button>
             {profileOpen && (
               <>
-                <div className="home-profile-backdrop" onClick={() => setProfileOpen(false)} />
+                <div className="home-profile-backdrop" onClick={() => { setProfileOpen(false); setEditingName(false) }} />
                 <div className="home-profile-panel">
-                  <div className="home-profile-email">{user.name || user.email}</div>
+                  {editingName ? (
+                    <div className="home-profile-name-edit">
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={e => setNameInput(e.target.value)}
+                        placeholder="여행자 이름"
+                        maxLength={30}
+                        autoFocus
+                      />
+                      <button type="button" onClick={saveName}>저장</button>
+                    </div>
+                  ) : (
+                    <div className="home-profile-email" onClick={startEditName}>
+                      {user.name || user.email}
+                      <span className="home-profile-name-hint">{user.name ? '수정' : '이름 설정'}</span>
+                    </div>
+                  )}
                   <div className="home-profile-plan">{activePlanLabel}</div>
                   <div className="home-profile-row">
                     <span>촬영 & 분석</span>
-                    <strong>{imageUsage ? `${imageUsage.remaining}/${imageUsage.limit}` : '1/1'}</strong>
+                    <strong>{imageUsage ? `${imageUsage.remaining}/${imageUsage.limit}` : '3/3'}</strong>
                   </div>
                   <div className="home-profile-row">
                     <span>AI 질문</span>

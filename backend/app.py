@@ -68,7 +68,7 @@ FREE_DAILY_AI_LIMIT = 3
 PAID_DAILY_AI_LIMIT = 15
 PREMIUM_DAILY_AI_LIMIT = 30
 
-FREE_DAILY_IMAGE_LIMIT = 1
+FREE_DAILY_IMAGE_LIMIT = 3
 PAID_DAILY_IMAGE_LIMIT = 5
 PREMIUM_DAILY_IMAGE_LIMIT = 10
 
@@ -217,6 +217,23 @@ def _active_entitlement(user: dict | None) -> dict | None:
     except ValueError:
         return None
     return None
+
+
+DELETION_LOCK_HOURS = 24
+
+
+def _deletion_lock_hours_remaining(user: dict | None) -> float:
+    if not user:
+        return 0
+    scheduled = user.get("deletionScheduledAt")
+    if not scheduled:
+        return 0
+    try:
+        scheduled_dt = datetime.fromisoformat(scheduled)
+    except ValueError:
+        return 0
+    remaining = (scheduled_dt - _now()).total_seconds() / 3600
+    return max(0, remaining)
 
 
 def _public_user(user: dict | None) -> dict | None:
@@ -491,8 +508,18 @@ async def register(req: AuthRequest):
         raise HTTPException(400, "비밀번호는 6자 이상이어야 합니다.")
 
     store = _load_store()
-    if email in store["users"]:
-        raise HTTPException(409, "이미 가입된 이메일입니다.")
+    existing = store["users"].get(email)
+    if existing:
+        if existing.get("deletionScheduledAt"):
+            remaining = _deletion_lock_hours_remaining(existing)
+            if remaining > 0:
+                raise HTTPException(403, f"탈퇴 처리 중인 계정입니다. 약 {int(remaining) + 1}시간 후 다시 가입할 수 있습니다.")
+            store["users"].pop(email, None)
+            store.get("usage", {}).pop(f"user:{email}", None)
+            store.get("imageUsage", {}).pop(f"user:{email}", None)
+            store.get("imageTranslationUsage", {}).pop(f"user:{email}", None)
+        else:
+            raise HTTPException(409, "이미 가입된 이메일입니다.")
 
     salt, password_hash = _hash_password(req.password)
     store["users"][email] = {
@@ -516,6 +543,9 @@ async def login(req: AuthRequest):
     user = store["users"].get(email)
     if not user:
         raise HTTPException(401, "이메일 또는 비밀번호가 올바르지 않습니다.")
+    if user.get("deletionScheduledAt") and _deletion_lock_hours_remaining(user) > 0:
+        remaining = _deletion_lock_hours_remaining(user)
+        raise HTTPException(403, f"탈퇴 처리 중인 계정입니다. 약 {int(remaining) + 1}시간 후 다시 가입할 수 있습니다.")
     if not user.get("salt") or not user.get("passwordHash"):
         raise HTTPException(401, "이 계정은 이메일 인증 또는 소셜 로그인으로 로그인해 주세요.")
     _, password_hash = _hash_password(req.password, user["salt"])
@@ -562,6 +592,15 @@ async def supabase_login(req: SupabaseAuthRequest):
     )
     store = _load_store()
     user = store["users"].get(email)
+    if user and user.get("deletionScheduledAt"):
+        remaining = _deletion_lock_hours_remaining(user)
+        if remaining > 0:
+            raise HTTPException(403, f"탈퇴 처리 중인 계정입니다. 약 {int(remaining) + 1}시간 후 다시 가입할 수 있습니다.")
+        store["users"].pop(email, None)
+        store.get("usage", {}).pop(f"user:{email}", None)
+        store.get("imageUsage", {}).pop(f"user:{email}", None)
+        store.get("imageTranslationUsage", {}).pop(f"user:{email}", None)
+        user = None
     if not user:
         user = {
             "email": email,
@@ -689,6 +728,15 @@ async def naver_login_callback(
 
     store = _load_store()
     user = store["users"].get(email)
+    if user and user.get("deletionScheduledAt"):
+        remaining = _deletion_lock_hours_remaining(user)
+        if remaining > 0:
+            raise HTTPException(403, f"탈퇴 처리 중인 계정입니다. 약 {int(remaining) + 1}시간 후 다시 가입할 수 있습니다.")
+        store["users"].pop(email, None)
+        store.get("usage", {}).pop(f"user:{email}", None)
+        store.get("imageUsage", {}).pop(f"user:{email}", None)
+        store.get("imageTranslationUsage", {}).pop(f"user:{email}", None)
+        user = None
     if not user:
         user = {
             "email": email,
@@ -746,6 +794,23 @@ async def me(
     }
 
 
+class UpdateNameRequest(BaseModel):
+    name: str
+
+
+@app.post("/account/name")
+async def update_name(req: UpdateNameRequest, authorization: str | None = Header(default=None)):
+    email, user, store = _get_user_by_token(authorization)
+    if not email or not user:
+        raise HTTPException(401, "로그인이 필요합니다.")
+    name = req.name.strip()
+    if not name:
+        raise HTTPException(400, "여행자 이름을 입력해 주세요.")
+    user["name"] = name[:30]
+    _save_store(store)
+    return {"user": _public_user(user)}
+
+
 @app.delete("/me")
 async def delete_account(authorization: str | None = Header(default=None)):
     email, user, store = _get_user_by_token(authorization)
@@ -767,11 +832,11 @@ async def delete_account(authorization: str | None = Header(default=None)):
         if response.status_code not in {200, 204, 404}:
             raise HTTPException(502, "인증 계정을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.")
 
-    store["users"].pop(email, None)
+    # 즉시 완전 삭제하지 않고 24시간 잠금만 걸어둔다.
+    # (탈퇴 후 바로 재가입해 무료 사용량을 초기화하는 것을 막기 위함)
+    user["deletionScheduledAt"] = (_now() + timedelta(hours=DELETION_LOCK_HOURS)).isoformat()
+    user.pop("supabaseUserId", None)
     store["sessions"] = {tok: em for tok, em in store.get("sessions", {}).items() if em != email}
-    store.get("usage", {}).pop(f"user:{email.lower()}", None)
-    store.get("imageUsage", {}).pop(f"user:{email.lower()}", None)
-    store.get("imageTranslationUsage", {}).pop(f"user:{email.lower()}", None)
     _save_store(store)
     return {"ok": True}
 

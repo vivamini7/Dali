@@ -437,6 +437,22 @@ export default function App() {
     }
   }, [])
 
+  const updateName = useCallback(async (name) => {
+    setAuthError('')
+    try {
+      const res = await fetch(`${API_URL}/account/name`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || '여행자 이름을 저장하지 못했습니다.')
+      setUser(data.user)
+    } catch (error) {
+      setAuthError(error.message || '여행자 이름을 저장하지 못했습니다.')
+    }
+  }, [authHeaders])
+
   const deleteAccount = useCallback(async () => {
     setAuthError('')
     try {
@@ -487,7 +503,7 @@ export default function App() {
       setCapturedImage(compressed)
       if (!appendMode) setPriceResult(null)
       setAnalyzeError(null)
-      setScreen('camera')
+      setScreen('result')
       setAnalyzing(true)
 
       const body    = JSON.stringify({ image_base64: compressed.base64, image_type: compressed.type })
@@ -686,6 +702,7 @@ export default function App() {
           passwordRecovery={passwordRecovery}
           onSocialLogin={socialLogin}
           onLogout={logout}
+          onUpdateName={updateName}
         />
       )}
 
