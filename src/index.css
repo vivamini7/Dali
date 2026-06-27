@@ -2121,6 +2121,13 @@ img { display: block; max-width: 100%; }
 .order-actions {
   display: flex; gap: 8px; padding: 14px 16px 0;
 }
+.order-actions.secondary {
+  padding: 14px 16px 0;
+}
+.order-home-btn {
+  font-size: .78rem; font-weight: 700;
+  color: var(--text-3);
+}
 
 /* ══════════════════════════════════════
    RESULT PAGE — ri-card 레이아웃
@@ -2191,6 +2198,7 @@ img { display: block; max-width: 100%; }
 
 /* 헤더 AI 버튼 */
 .result-ai-btn {
+  margin-left: auto;
   font-size: .68rem; font-weight: 700;
   color: var(--brown);
   background: var(--brown-light);

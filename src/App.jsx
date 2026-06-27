@@ -693,6 +693,7 @@ export default function App() {
           cart={orderCart}
           onBack={orderFromReceipt ? () => setScreen('home') : null}
           onReset={orderFromReceipt ? goBackFromResult : goEditOrder}
+          onGoHome={goBackFromResult}
           cardFee={cardFee}
         />
       ) : screen === 'settings' ? (

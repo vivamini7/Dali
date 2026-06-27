@@ -1436,11 +1436,16 @@ async def translate_image(
         if not blocks:
             return {"translated_image": None, "message": "번역할 텍스트를 찾지 못했습니다."}
 
+        # 비전 모델이 숫자만 있는 텍스트(가격 등)를 문자열이 아닌 JSON 숫자로
+        # 반환하는 경우가 있어, 이후 문자열 처리에서 타입 오류가 나지 않도록 강제 변환
+        for b in blocks:
+            b["text"] = str(b.get("text") if b.get("text") is not None else "")
+
         # 1-2. DeepL로 추출된 텍스트 번역 (병렬 처리)
-        original_texts = [b.get("text", "") for b in blocks]
+        original_texts = [b["text"] for b in blocks]
         translated_texts = await translate_with_deepl(original_texts)
         for b, t in zip(blocks, translated_texts):
-            b["translated"] = t
+            b["translated"] = str(t) if t is not None else ""
 
         # 2. 이미지 디코딩 + 퍼센트 좌표 → 픽셀 변환
         img_bytes = base64.b64decode(req.image_base64)

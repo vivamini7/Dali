@@ -57,7 +57,7 @@ function fmtKrwRange(minAmount, maxAmount) {
   return `${fmtKrw(minAmount)} ~ ${fmtKrw(maxAmount)}`
 }
 
-export default function OrderPage({ priceResult, cart, onBack, onReset, cardFee = 0 }) {
+export default function OrderPage({ priceResult, cart, onBack, onReset, onGoHome, cardFee = 0 }) {
   const receiptRef = useRef(null)
   const [sharing, setSharing] = useState(false)
   const [orderMode, setOrderMode] = useState(false)
@@ -277,6 +277,11 @@ export default function OrderPage({ priceResult, cart, onBack, onReset, cardFee 
       )}
 
       {/* 버튼 */}
+      {!isReceipt && onGoHome && (
+        <div className="order-actions secondary">
+          <button className="order-home-btn" onClick={onGoHome}>← 홈으로</button>
+        </div>
+      )}
       <div className="order-actions">
         <button className="result-action-btn" onClick={onReset}>{isReceipt ? '처음으로' : '주문 수정'}</button>
         <button className="result-action-btn order-now-btn" onClick={() => setOrderMode(v => !v)}>

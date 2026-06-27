@@ -295,9 +295,6 @@ export default function ResultPage({
   }, [])
 
   const prices   = priceResult?.prices || []
-  const detected = priceResult?.detectedLanguage
-  const currency = priceResult?.detectedCurrency
-  const flag     = FLAGS[currency] || '🌐'
 
   // 디버그: originalText 확인
   if (prices.length) console.log('[ResultPage] prices[0]:', prices[0])
@@ -413,10 +410,6 @@ export default function ResultPage({
         </button>
       </div>
 
-      {/* 감지 배너 */}
-      <div className="result-detect-bar">
-        <span className="result-detect-badge">{flag} {detected} · {currency}</span>
-      </div>
       <div className="result-detect-actions">
         <button className="result-detect-action-btn" onClick={showMenuImage}>
           메뉴판 보기
