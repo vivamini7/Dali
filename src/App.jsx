@@ -514,7 +514,8 @@ export default function App() {
         translatedImageMessage: data.message || (data.translated_image ? null : '번역할 텍스트를 찾지 못했습니다.'),
       } : prev)
     } catch (e) {
-      setTranslateImageError(e.message || '메뉴판 이미지를 만들지 못했습니다.')
+      console.error('[translateMenuImage]', e)
+      setTranslateImageError('기능을 준비 중입니다.')
     } finally {
       setTranslatingImage(false)
     }
