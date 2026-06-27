@@ -1461,10 +1461,10 @@ async def translate_image(
             y2 = int(float(b.get("y2") or 0) / 100 * ih)
             if x2 - x1 < 4 or y2 - y1 < 4:
                 continue
-            translated = b.get("translated") or b.get("text", "")
+            translated_text = b.get("translated") or b.get("text", "")
             px_blocks.append({
                 "px": (x1, y1, x2, y2),
-                "translated": translated,
+                "translated": translated_text,
                 "dark_bg": b.get("dark_bg", False),
             })
 
