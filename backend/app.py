@@ -6,6 +6,7 @@ import re
 import json
 import time
 import asyncio
+import traceback
 import base64
 import io
 import secrets
@@ -1045,7 +1046,7 @@ def render_blocks(img_pil: Image.Image, blocks: list) -> Image.Image:
     for b in blocks:
         x1, y1, x2, y2 = b["px"]
         bw, bh = x2 - x1, y2 - y1
-        text = b["translated"]
+        text = str(b.get("translated") if b.get("translated") is not None else "")
 
         # 배경 밝기 측정 → 글자색 자동 결정
         region = img_arr[max(0,y1):min(ih,y2), max(0,x1):min(iw,x2)]
@@ -1454,10 +1455,10 @@ async def translate_image(
 
         px_blocks = []
         for b in blocks:
-            x1 = int(b.get("x1", 0) / 100 * iw)
-            y1 = int(b.get("y1", 0) / 100 * ih)
-            x2 = int(b.get("x2", 0) / 100 * iw)
-            y2 = int(b.get("y2", 0) / 100 * ih)
+            x1 = int(float(b.get("x1") or 0) / 100 * iw)
+            y1 = int(float(b.get("y1") or 0) / 100 * ih)
+            x2 = int(float(b.get("x2") or 0) / 100 * iw)
+            y2 = int(float(b.get("y2") or 0) / 100 * ih)
             if x2 - x1 < 4 or y2 - y1 < 4:
                 continue
             translated = b.get("translated") or b.get("text", "")
@@ -1506,6 +1507,7 @@ async def translate_image(
         raise
     except Exception as e:
         print(f"[ERROR/translate] {e}")
+        traceback.print_exc()
         raise HTTPException(500, str(e))
 
 
