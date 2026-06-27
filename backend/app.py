@@ -225,6 +225,7 @@ def _public_user(user: dict | None) -> dict | None:
     entitlement = _active_entitlement(user)
     return {
         "email": user.get("email"),
+        "name": user.get("name"),
         "createdAt": user.get("createdAt"),
         "entitlement": entitlement,
         "authProvider": user.get("authProvider", "email"),
@@ -461,6 +462,7 @@ class AnalyzeRequest(BaseModel):
 class AuthRequest(BaseModel):
     email: str
     password: str
+    name: str | None = None
 
 
 class SupabaseAuthRequest(BaseModel):
@@ -495,6 +497,7 @@ async def register(req: AuthRequest):
     salt, password_hash = _hash_password(req.password)
     store["users"][email] = {
         "email": email,
+        "name": (req.name or "").strip() or None,
         "salt": salt,
         "passwordHash": password_hash,
         "createdAt": _now().isoformat(),
@@ -570,6 +573,9 @@ async def supabase_login(req: SupabaseAuthRequest):
     user["supabaseUserId"] = supabase_user_id
     user["authProvider"] = provider
     user["emailVerified"] = bool(auth_user.get("email_confirmed_at"))
+    metadata_name = str(auth_user.get("user_metadata", {}).get("name") or "").strip()
+    if metadata_name:
+        user["name"] = metadata_name
 
     token = secrets.token_urlsafe(32)
     store["sessions"][token] = email

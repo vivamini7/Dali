@@ -19,6 +19,7 @@ import { Browser } from '@capacitor/browser'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:7860'
 const GUEST_ID_KEY = 'dalibaba_guest_id'
 const AUTH_TOKEN_KEY = 'dalibaba_auth_token'
+const LOGGED_OUT_KEY = 'dalibaba_logged_out'
 
 function screenFromPath() {
   if (window.location.pathname === '/privacy') return 'privacy'
@@ -186,6 +187,7 @@ export default function App() {
   useEffect(() => { refreshAccount() }, [refreshAccount])
 
   const saveAppSession = useCallback(async (data, remember = true) => {
+    localStorage.removeItem(LOGGED_OUT_KEY)
     localStorage.removeItem(AUTH_TOKEN_KEY)
     sessionStorage.removeItem(AUTH_TOKEN_KEY)
     if (remember) localStorage.setItem(AUTH_TOKEN_KEY, data.token)
@@ -249,13 +251,17 @@ export default function App() {
   useEffect(() => {
     let supabaseListener
     if (supabase) {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session?.access_token) {
-          exchangeSupabaseSession(data.session.access_token, true).catch(error => {
-            setAuthError(error.message || '로그인 연결에 실패했습니다.')
-          })
-        }
-      })
+      if (localStorage.getItem(LOGGED_OUT_KEY) === '1') {
+        supabase.auth.signOut().catch(() => {})
+      } else {
+        supabase.auth.getSession().then(({ data }) => {
+          if (data.session?.access_token) {
+            exchangeSupabaseSession(data.session.access_token, true).catch(error => {
+              setAuthError(error.message || '로그인 연결에 실패했습니다.')
+            })
+          }
+        })
+      }
 
       const { data } = supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
@@ -299,6 +305,7 @@ export default function App() {
 
       CapacitorApp.getLaunchUrl().then(async launch => {
         if (!launch?.url) return
+        if (localStorage.getItem(LOGGED_OUT_KEY) === '1') return
         try {
           await handleAuthReturnUrl(launch.url)
         } catch (error) {
@@ -313,7 +320,7 @@ export default function App() {
     }
   }, [exchangeSupabaseSession, handleAuthReturnUrl])
 
-  const submitAuth = useCallback(async (mode, email, password, remember = true) => {
+  const submitAuth = useCallback(async (mode, email, password, remember = true, name = '') => {
     setAuthLoading(true)
     setAuthError('')
     setAuthNotice('')
@@ -323,7 +330,7 @@ export default function App() {
           const { data, error } = await supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: authRedirectUrl() },
+            options: { emailRedirectTo: authRedirectUrl(), data: name ? { name } : undefined },
           })
           if (error) throw error
           if (data.session?.access_token) {
@@ -345,7 +352,7 @@ export default function App() {
       const res = await fetch(`${API_URL}/auth/${mode}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, name: name || undefined }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -438,6 +445,7 @@ export default function App() {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.detail || '계정 탈퇴에 실패했습니다.')
       }
+      localStorage.setItem(LOGGED_OUT_KEY, '1')
       localStorage.removeItem(AUTH_TOKEN_KEY)
       sessionStorage.removeItem(AUTH_TOKEN_KEY)
       setAuthToken('')
@@ -450,6 +458,7 @@ export default function App() {
   }, [authHeaders, refreshAccount])
 
   const logout = useCallback(async () => {
+    localStorage.setItem(LOGGED_OUT_KEY, '1')
     localStorage.removeItem(AUTH_TOKEN_KEY)
     sessionStorage.removeItem(AUTH_TOKEN_KEY)
     setAuthToken('')
@@ -489,7 +498,7 @@ export default function App() {
       console.log('[Dalibaba] /analyze 응답:', res.status)
       if (!res.ok) {
         const fallback = res.status === 429
-          ? '오늘 사용 가능한 촬영/분석 횟수를 모두 사용했습니다. 내일 다시 시도해주세요.'
+          ? '오늘 사용 가능한 촬영 & 분석 횟수를 모두 사용했습니다. 내일 다시 시도해주세요.'
           : res.status === 401
             ? '로그인이 필요한 기능입니다.'
             : '이미지 분석에 실패했습니다. 잠시 후 다시 시도해주세요.'
@@ -640,7 +649,6 @@ export default function App() {
           cardFee={cardFee} onCardFeeChange={setCardFee}
           user={user}
           plans={plans}
-          aiUsage={aiUsage}
           authError={authError}
           authNotice={authNotice}
           authLoading={authLoading}

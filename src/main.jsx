@@ -7,7 +7,7 @@ import './index.css'
 
 if (Capacitor.isNativePlatform()) {
   StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {})
-  StatusBar.setStyle({ style: Style.Light }).catch(() => {})
+  StatusBar.setStyle({ style: Style.Dark }).catch(() => {})
 }
 
 /* ── 전역 오류 수집 ── */
@@ -62,4 +62,9 @@ if (bootSplash) {
 
   if (document.readyState === 'complete') removeSplash()
   else window.addEventListener('load', removeSplash, { once: true })
+
+  bootSplash.addEventListener('transitionend', () => {
+    window.__daliSplashDone = true
+    window.dispatchEvent(new Event('dali-splash-done'))
+  }, { once: true })
 }

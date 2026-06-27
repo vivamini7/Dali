@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 
 /* 뛰는 동작: 위아래 통통 + 앞뒤 기울기 */
@@ -10,15 +11,24 @@ const runVariants = {
 }
 
 export default function SquirrelHeader() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', width: '100%', height: '100%', overflow: 'hidden' }}>
+  const [ready, setReady] = useState(() => Boolean(window.__daliSplashDone))
 
-      {/* 다람쥐: 왼쪽 → 오른쪽으로 뛰어가며 사라짐 */}
+  useEffect(() => {
+    if (ready) return
+    const handler = () => setReady(true)
+    window.addEventListener('dali-splash-done', handler, { once: true })
+    return () => window.removeEventListener('dali-splash-done', handler)
+  }, [ready])
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
+
+      {/* 다람쥐: 왼쪽 → 오른쪽으로 뛰어가며 사라짐 (메인 화면이 뜬 뒤 출발) */}
       <motion.div
         style={{ position: 'absolute', left: 0, originY: 1 }}
         initial={{ x: -60 }}
-        animate={{ x: 'calc(100vw + 60px)' }}
-        transition={{ duration: 4.1, ease: [0.15, 0, 0.45, 1], delay: 0.2 }}
+        animate={{ x: ready ? 'calc(100vw + 60px)' : -60 }}
+        transition={{ duration: 4.1, ease: [0.15, 0, 0.45, 1], delay: ready ? 0.2 : 0 }}
       >
         <motion.img
           src="/logo-back.png"
@@ -39,8 +49,8 @@ export default function SquirrelHeader() {
       <motion.div
         style={{ display: 'flex', alignItems: 'center', gap: 6 }}
         initial={{ opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.7, ease: 'easeOut', delay: 0.8 }}
+        animate={{ opacity: ready ? 1 : 0, x: ready ? 0 : -8 }}
+        transition={{ duration: 0.7, ease: 'easeOut', delay: ready ? 0.8 : 0 }}
       >
         <span style={{
           fontSize: '1.05rem', fontWeight: 900,

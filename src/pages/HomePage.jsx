@@ -32,6 +32,16 @@ function fmtRate(value, code) {
     : value.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+function PersonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+    </svg>
+  )
+}
+
 function SettingsGearIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -60,6 +70,9 @@ export default function HomePage({
   onSocialLogin,
   onLogout,
 }) {
+  const [profileOpen, setProfileOpen] = useState(false)
+  const activePlan = user?.entitlement
+  const activePlanLabel = activePlan?.label || '무료 플랜'
   const [rates,     setRates]     = useState({})
   const [rateDate,  setRateDate]  = useState(null)
   const [loading,   setLoading]   = useState(true)
@@ -68,6 +81,7 @@ export default function HomePage({
   const [authMode, setAuthMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [travelerName, setTravelerName] = useState('')
   const [authOpen, setAuthOpen] = useState(false)
   const cameraRef = useRef(null)
   const galleryRef = useRef(null)
@@ -113,7 +127,7 @@ export default function HomePage({
       return
     }
     localStorage.setItem('dalibaba_saved_email', email)
-    onAuthSubmit?.(authMode, email, password, true)
+    onAuthSubmit?.(authMode, email, password, true, travelerName)
   }
 
   useEffect(() => {
@@ -145,9 +159,40 @@ export default function HomePage({
       <div className="home-header">
         <SquirrelHeader />
         {user ? (
-          <button className="home-login-btn" type="button" onClick={onLogout}>
-            로그아웃
-          </button>
+          <div className="home-profile-wrap">
+            <button
+              className="home-settings-btn"
+              type="button"
+              onClick={() => setProfileOpen(open => !open)}
+              aria-label="내 정보"
+            >
+              <PersonIcon />
+            </button>
+            {profileOpen && (
+              <>
+                <div className="home-profile-backdrop" onClick={() => setProfileOpen(false)} />
+                <div className="home-profile-panel">
+                  <div className="home-profile-email">{user.name || user.email}</div>
+                  <div className="home-profile-plan">{activePlanLabel}</div>
+                  <div className="home-profile-row">
+                    <span>촬영 & 분석</span>
+                    <strong>{imageUsage ? `${imageUsage.remaining}/${imageUsage.limit}` : '1/1'}</strong>
+                  </div>
+                  <div className="home-profile-row">
+                    <span>AI 질문</span>
+                    <strong>{aiUsage ? `${aiUsage.remaining}/${aiUsage.limit}` : '3/3'}</strong>
+                  </div>
+                  <button
+                    className="home-profile-tab logout"
+                    type="button"
+                    onClick={() => { setProfileOpen(false); onLogout?.() }}
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         ) : (
           <button className="home-login-btn" type="button" onClick={() => setAuthOpen(true)}>
             로그인
@@ -157,17 +202,6 @@ export default function HomePage({
           <SettingsGearIcon />
         </button>
       </div>
-
-      {user && (imageUsage || aiUsage) && (
-        <div className="home-usage-row">
-          {imageUsage && (
-            <span className="home-usage-pill">촬영/분석 {imageUsage.remaining}/{imageUsage.limit}</span>
-          )}
-          {aiUsage && (
-            <span className="home-usage-pill">AI 질문 {aiUsage.remaining}/{aiUsage.limit}</span>
-          )}
-        </div>
-      )}
 
       {authOpen && (
         <div className="home-auth-overlay" onClick={() => setAuthOpen(false)}>
@@ -222,6 +256,17 @@ export default function HomePage({
             )}
 
             <div className="home-auth-fields">
+              {!passwordRecovery && authMode === 'register' && (
+                <input
+                  type="text"
+                  value={travelerName}
+                  onChange={e => setTravelerName(e.target.value)}
+                  placeholder="여행자 이름"
+                  autoComplete="name"
+                  maxLength={30}
+                  required
+                />
+              )}
               {!passwordRecovery && (
                 <input
                   type="email"
@@ -387,6 +432,18 @@ export default function HomePage({
             style={{ display: 'none' }}
             onChange={handleCameraFile}
           />
+          <div className="home-cta-divider" aria-hidden="true">
+            <svg width="24" height="100%" viewBox="0 0 24 56" preserveAspectRatio="none">
+              <path
+                d="M0,0 L12,0 C18,7 6,7 12,14 C18,21 6,21 12,28 C18,35 6,35 12,42 C18,49 6,49 12,56 L0,56 Z"
+                fill="#8A5A33"
+              />
+              <path
+                d="M24,0 L12,0 C18,7 6,7 12,14 C18,21 6,21 12,28 C18,35 6,35 12,42 C18,49 6,49 12,56 L24,56 Z"
+                fill="#FBF4EC"
+              />
+            </svg>
+          </div>
           <button className="home-cta-btn gallery" onClick={() => (user ? galleryRef.current?.click() : setAuthOpen(true))}>
             <svg className="home-cta-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <rect x="3" y="3" width="18" height="18" rx="3" />

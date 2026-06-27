@@ -9,7 +9,6 @@ export default function SettingsPage({
   onCardFeeChange,
   user,
   plans = [],
-  aiUsage,
   authError,
   onPurchasePlan,
   onDeleteAccount,
@@ -59,13 +58,7 @@ export default function SettingsPage({
       </div>
 
       <div className="settings-row-2col">
-        <div className="settings-mini-card">
-          <div className="settings-mini-title">AI 질문</div>
-          <div className="settings-mini-value">{aiUsage ? `${aiUsage.remaining}/${aiUsage.limit}` : '3/3'}</div>
-          <div className="settings-mini-hint">무료 하루 3회</div>
-        </div>
-
-        <button className="settings-mini-card settings-mini-btn" type="button" onClick={openPaySheet}>
+        <button className="settings-mini-card settings-mini-btn" type="button" onClick={openPaySheet} style={{flex: 1}}>
           <div className="settings-mini-title">여행 패스 · 구독</div>
           <div className="settings-mini-value">{activePlan ? activePlan.label : '선택하기'}</div>
           <div className="settings-mini-hint">{activePlan ? `${expiresLabel}까지` : '구매 / 구독'}</div>
@@ -84,7 +77,7 @@ export default function SettingsPage({
               <button className="pay-sheet-close" type="button" onClick={() => setPayOpen(false)}>✕</button>
             </div>
 
-            <div className="pay-section-label">여행 패스 (촬영/분석 5회 · AI 질문 15회)</div>
+            <div className="pay-section-label">여행 패스 (촬영 & 분석 5회 · AI 질문 15회)</div>
             <div className="pay-plan-grid">
               {passPlans.map(plan => (
                 <button
@@ -99,7 +92,7 @@ export default function SettingsPage({
               ))}
             </div>
 
-            <div className="pay-section-label">구독 (촬영/분석 5회 · AI 질문 15회)</div>
+            <div className="pay-section-label">구독 (촬영 & 분석 5회 · AI 질문 15회)</div>
             <div className="pay-subscription-list">
               {subscriptionPlans.map(plan => (
                 <button
@@ -114,7 +107,7 @@ export default function SettingsPage({
               ))}
             </div>
 
-            <div className="pay-section-label">프리미엄 (촬영/분석 10회 · AI 질문 30회)</div>
+            <div className="pay-section-label">프리미엄 (촬영 & 분석 10회 · AI 질문 30회)</div>
             <div className="pay-subscription-list">
               {premiumPlans.map(plan => (
                 <button
@@ -243,7 +236,7 @@ export default function SettingsPage({
       {/* 앱 소개 */}
       <div className="settings-about">
         <div className="settings-about-name">Dalibaba</div>
-        <div className="settings-app-version">1.0.1 BETA</div>
+        <div className="settings-app-version">0.9.8 beta</div>
       </div>
 
     </div>
