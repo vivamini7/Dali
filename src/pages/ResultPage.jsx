@@ -263,6 +263,8 @@ export default function ResultPage({
   onBack,
   onOrder,
   onAddMenu,
+  onTranslateImage,
+  translatingImage,
   cardFee = 0,
   authToken,
   guestId,
@@ -273,9 +275,15 @@ export default function ResultPage({
   const [usdRates,   setUsdRates] = useState({})
   const [chatOpen,   setChatOpen] = useState(false)
   const [activeCat,  setActiveCat] = useState('all')
+  const [imageView,  setImageView] = useState(false)
   const addMenuCameraRef = useRef(null)
   const addMenuGalleryRef = useRef(null)
   const [addMenuChoiceOpen, setAddMenuChoiceOpen] = useState(false)
+
+  const showMenuImage = () => {
+    setImageView(true)
+    if (!priceResult?.translatedImage) onTranslateImage?.()
+  }
 
   useEffect(() => {
     fetch('https://open.er-api.com/v6/latest/USD')
@@ -409,10 +417,42 @@ export default function ResultPage({
       {/* 감지 배너 */}
       <div className="result-detect-bar">
         <span className="result-detect-badge">{flag} {detected} · {currency}</span>
-        <button className="result-add-menu-inline" onClick={() => setAddMenuChoiceOpen(true)}>
-          메뉴 추가하기
-        </button>
+        <div className="result-detect-actions">
+          <button className="result-add-menu-inline secondary" onClick={showMenuImage}>
+            메뉴판 보기
+          </button>
+          <button className="result-add-menu-inline" onClick={() => setAddMenuChoiceOpen(true)}>
+            메뉴 추가하기
+          </button>
+        </div>
       </div>
+
+      {imageView && (
+        <div className="menu-image-overlay" onClick={() => setImageView(false)}>
+          <div className="menu-image-sheet" onClick={e => e.stopPropagation()}>
+            <div className="menu-image-sheet-head">
+              <span>메뉴판에서 위치 확인</span>
+              <button type="button" onClick={() => setImageView(false)}>✕</button>
+            </div>
+            {translatingImage ? (
+              <div className="menu-image-loading">
+                <div className="cam-dots"><span/><span/><span/></div>
+                <span>메뉴판에 번역을 입히는 중이에요</span>
+              </div>
+            ) : priceResult?.translatedImage ? (
+              <img
+                src={`data:image/jpeg;base64,${priceResult.translatedImage}`}
+                alt="원문 위치에 한국어 번역을 입힌 메뉴판"
+                className="menu-image-photo"
+              />
+            ) : (
+              <div className="menu-image-loading">
+                <span>{priceResult?.translatedImageMessage || '번역 이미지를 만들지 못했습니다.'}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 카테고리 필터 탭 */}
       <div className="ri-cat-tabs">

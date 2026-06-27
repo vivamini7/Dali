@@ -137,6 +137,7 @@ export default function App() {
   const [priceResult,   setPriceResult]   = useState(null)
   const [analyzing,     setAnalyzing]     = useState(false)
   const [analyzeError,  setAnalyzeError]  = useState(null)
+  const [translatingImage, setTranslatingImage] = useState(false)
 
   /* ── 주문 데이터 ── */
   const [orderCart,        setOrderCart]        = useState({})
@@ -445,8 +446,8 @@ export default function App() {
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       })
+      if (!res.ok) throw new Error(await getApiError(res, '여행자 이름을 저장하지 못했습니다.'))
       const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || '여행자 이름을 저장하지 못했습니다.')
       setUser(data.user)
     } catch (error) {
       setAuthError(error.message || '여행자 이름을 저장하지 못했습니다.')
@@ -491,6 +492,31 @@ export default function App() {
       `${plan?.label || '선택한 이용권'} 결제는 Google Play 인앱결제 연결 후 사용할 수 있습니다.`
     )
   }, [plans])
+
+  /* ── 메뉴판 사진에 번역을 입힌 이미지 생성 (요청 시) ── */
+  const translateMenuImage = useCallback(async () => {
+    if (!capturedImage) {
+      setAnalyzeError('원본 이미지를 찾을 수 없습니다. 다시 촬영해주세요.')
+      return
+    }
+    setTranslatingImage(true)
+    try {
+      const headers = { ...authHeaders(), 'Content-Type': 'application/json' }
+      const body = JSON.stringify({ image_base64: capturedImage.base64, image_type: capturedImage.type })
+      const res = await fetch(`${API_URL}/translate-image`, { method: 'POST', headers, body })
+      const data = await res.json()
+      if (!res.ok) throw new Error(await getApiError(res, '메뉴판 이미지를 만들지 못했습니다.'))
+      setPriceResult(prev => prev ? {
+        ...prev,
+        translatedImage: data.translated_image || null,
+        translatedImageMessage: data.message || (data.translated_image ? null : '번역할 텍스트를 찾지 못했습니다.'),
+      } : prev)
+    } catch (e) {
+      setAnalyzeError(e.message || '메뉴판 이미지를 만들지 못했습니다.')
+    } finally {
+      setTranslatingImage(false)
+    }
+  }, [capturedImage, authHeaders])
 
   /* ── 이미지 선택 → 분석 시작 ── */
   const handleImageFile = useCallback(async (file, options = {}) => {
@@ -645,6 +671,8 @@ export default function App() {
           onBack={goBackFromResult}
           onOrder={goToOrder}
           onAddMenu={(file) => handleImageFile(file, { append: true })}
+          onTranslateImage={translateMenuImage}
+          translatingImage={translatingImage}
           cardFee={cardFee}
           authToken={authToken}
           guestId={guestId}

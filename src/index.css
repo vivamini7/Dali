@@ -1866,6 +1866,12 @@ img { display: block; max-width: 100%; }
   border-bottom: 1px solid var(--brown-mid);
 }
 .result-detect-badge { font-size: .8rem; font-weight: 700; color: var(--brown-2); }
+.result-detect-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.result-add-menu-inline.secondary {
+  background: transparent;
+  color: var(--brown-2);
+  box-shadow: inset 0 0 0 1px var(--border-2);
+}
 .result-detect-count { font-size: .74rem; color: var(--text-3); font-weight: 600; }
 
 /* ── 카테고리 필터 탭 ── */
@@ -3851,6 +3857,70 @@ body,
 @keyframes rateFadeIn {
   from { opacity: 0; transform: translateX(8px); }
   to { opacity: 1; transform: translateX(0); }
+}
+
+.menu-image-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 660;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(25,21,18,.55);
+  padding: 24px;
+}
+
+.menu-image-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 86vh;
+  background: var(--surface);
+  border-radius: 18px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-image-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  font-size: .85rem;
+  font-weight: 800;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-2);
+}
+
+.menu-image-sheet-head button {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-image-photo {
+  display: block;
+  width: 100%;
+  max-height: 76vh;
+  object-fit: contain;
+  background: #111;
+}
+
+.menu-image-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 20px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-2);
+  text-align: center;
 }
 
 /* ── Add menu and order helper ── */
