@@ -513,7 +513,7 @@ async def register(req: AuthRequest):
         if existing.get("deletionScheduledAt"):
             remaining = _deletion_lock_hours_remaining(existing)
             if remaining > 0:
-                raise HTTPException(403, f"탈퇴 처리 중인 계정입니다. 약 {int(remaining) + 1}시간 후 다시 가입할 수 있습니다.")
+                raise HTTPException(403, "탈퇴 처리된 계정입니다. 24시간 후에 재가입할 수 있습니다.")
             store["users"].pop(email, None)
             store.get("usage", {}).pop(f"user:{email}", None)
             store.get("imageUsage", {}).pop(f"user:{email}", None)
@@ -545,7 +545,7 @@ async def login(req: AuthRequest):
         raise HTTPException(401, "이메일 또는 비밀번호가 올바르지 않습니다.")
     if user.get("deletionScheduledAt") and _deletion_lock_hours_remaining(user) > 0:
         remaining = _deletion_lock_hours_remaining(user)
-        raise HTTPException(403, f"탈퇴 처리 중인 계정입니다. 약 {int(remaining) + 1}시간 후 다시 가입할 수 있습니다.")
+        raise HTTPException(403, "탈퇴 처리된 계정입니다. 24시간 후에 재가입할 수 있습니다.")
     if not user.get("salt") or not user.get("passwordHash"):
         raise HTTPException(401, "이 계정은 이메일 인증 또는 소셜 로그인으로 로그인해 주세요.")
     _, password_hash = _hash_password(req.password, user["salt"])
@@ -595,7 +595,7 @@ async def supabase_login(req: SupabaseAuthRequest):
     if user and user.get("deletionScheduledAt"):
         remaining = _deletion_lock_hours_remaining(user)
         if remaining > 0:
-            raise HTTPException(403, f"탈퇴 처리 중인 계정입니다. 약 {int(remaining) + 1}시간 후 다시 가입할 수 있습니다.")
+            raise HTTPException(403, "탈퇴 처리된 계정입니다. 24시간 후에 재가입할 수 있습니다.")
         store["users"].pop(email, None)
         store.get("usage", {}).pop(f"user:{email}", None)
         store.get("imageUsage", {}).pop(f"user:{email}", None)
@@ -731,7 +731,7 @@ async def naver_login_callback(
     if user and user.get("deletionScheduledAt"):
         remaining = _deletion_lock_hours_remaining(user)
         if remaining > 0:
-            raise HTTPException(403, f"탈퇴 처리 중인 계정입니다. 약 {int(remaining) + 1}시간 후 다시 가입할 수 있습니다.")
+            raise HTTPException(403, "탈퇴 처리된 계정입니다. 24시간 후에 재가입할 수 있습니다.")
         store["users"].pop(email, None)
         store.get("usage", {}).pop(f"user:{email}", None)
         store.get("imageUsage", {}).pop(f"user:{email}", None)

@@ -138,6 +138,7 @@ export default function App() {
   const [analyzing,     setAnalyzing]     = useState(false)
   const [analyzeError,  setAnalyzeError]  = useState(null)
   const [translatingImage, setTranslatingImage] = useState(false)
+  const [translateImageError, setTranslateImageError] = useState('')
 
   /* ── 주문 데이터 ── */
   const [orderCart,        setOrderCart]        = useState({})
@@ -495,8 +496,9 @@ export default function App() {
 
   /* ── 메뉴판 사진에 번역을 입힌 이미지 생성 (요청 시) ── */
   const translateMenuImage = useCallback(async () => {
+    setTranslateImageError('')
     if (!capturedImage) {
-      setAnalyzeError('원본 이미지를 찾을 수 없습니다. 다시 촬영해주세요.')
+      setTranslateImageError('원본 이미지를 찾을 수 없습니다. 다시 촬영해주세요.')
       return
     }
     setTranslatingImage(true)
@@ -504,15 +506,15 @@ export default function App() {
       const headers = { ...authHeaders(), 'Content-Type': 'application/json' }
       const body = JSON.stringify({ image_base64: capturedImage.base64, image_type: capturedImage.type })
       const res = await fetch(`${API_URL}/translate-image`, { method: 'POST', headers, body })
-      const data = await res.json()
       if (!res.ok) throw new Error(await getApiError(res, '메뉴판 이미지를 만들지 못했습니다.'))
+      const data = await res.json()
       setPriceResult(prev => prev ? {
         ...prev,
         translatedImage: data.translated_image || null,
         translatedImageMessage: data.message || (data.translated_image ? null : '번역할 텍스트를 찾지 못했습니다.'),
       } : prev)
     } catch (e) {
-      setAnalyzeError(e.message || '메뉴판 이미지를 만들지 못했습니다.')
+      setTranslateImageError(e.message || '메뉴판 이미지를 만들지 못했습니다.')
     } finally {
       setTranslatingImage(false)
     }
@@ -527,7 +529,7 @@ export default function App() {
     try {
       const compressed = await compressImage(file)
       setCapturedImage(compressed)
-      if (!appendMode) setPriceResult(null)
+      if (!appendMode) { setPriceResult(null); setOrderCart({}) }
       setAnalyzeError(null)
       setScreen('result')
       setAnalyzing(true)
@@ -632,6 +634,7 @@ export default function App() {
     setPriceResult(null)
     setAnalyzeError(null)
     setOrderFromReceipt(false)
+    setOrderCart({})
   }
 
   /* ── 카메라에서 뒤로 ── */
@@ -644,6 +647,9 @@ export default function App() {
     setOrderFromReceipt(false)
     setScreen('order')
   }
+
+  /* ── 주문서에서 메뉴판으로 (주문 수정) ── */
+  const goEditOrder = () => setScreen('result')
 
   const showNav = false
 
@@ -673,18 +679,20 @@ export default function App() {
           onAddMenu={(file) => handleImageFile(file, { append: true })}
           onTranslateImage={translateMenuImage}
           translatingImage={translatingImage}
+          translateImageError={translateImageError}
           cardFee={cardFee}
           authToken={authToken}
           guestId={guestId}
           aiUsage={aiUsage}
           onAiUsageChange={setAiUsage}
+          initialCart={orderCart}
         />
       ) : screen === 'order' ? (
         <OrderPage
           priceResult={orderPriceResult}
           cart={orderCart}
-          onBack={() => setScreen(orderFromReceipt ? 'home' : 'result')}
-          onReset={goBackFromResult}
+          onBack={orderFromReceipt ? () => setScreen('home') : null}
+          onReset={orderFromReceipt ? goBackFromResult : goEditOrder}
           cardFee={cardFee}
         />
       ) : screen === 'settings' ? (

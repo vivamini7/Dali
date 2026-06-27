@@ -1103,6 +1103,13 @@ img { display: block; max-width: 100%; }
   color: var(--text);
 }
 .result-title { flex: 1; font-size: 1rem; font-weight: 800; text-align: center; letter-spacing: -.3px; }
+.result-title.centered {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
 .result-header-actions { display: flex; gap: 6px; }
 .result-header-btn {
   width: 34px; height: 34px;
@@ -1866,11 +1873,26 @@ img { display: block; max-width: 100%; }
   border-bottom: 1px solid var(--brown-mid);
 }
 .result-detect-badge { font-size: .8rem; font-weight: 700; color: var(--brown-2); }
-.result-detect-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.result-add-menu-inline.secondary {
-  background: transparent;
-  color: var(--brown-2);
-  box-shadow: inset 0 0 0 1px var(--border-2);
+.result-detect-actions {
+  display: flex; gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-2);
+}
+.result-detect-action-btn {
+  flex: 1;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: var(--r-lg);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: .8rem; font-weight: 800; color: var(--text);
+  box-shadow: var(--shadow-xs);
+  transition: transform .12s, background .12s;
+}
+.result-detect-action-btn:active {
+  transform: scale(.97);
+  background: var(--surface-2);
 }
 .result-detect-count { font-size: .74rem; color: var(--text-3); font-weight: 600; }
 
@@ -2668,6 +2690,23 @@ img { display: block; max-width: 100%; }
 .receipt-tip-note {
   margin-top: 4px;
   font-size: .66rem; color: var(--text-3); font-weight: 600; line-height: 1.35;
+}
+.receipt-tip-total {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--brown-mid);
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 10px;
+  font-size: .76rem; color: var(--text); font-weight: 800;
+}
+.receipt-tip-total strong {
+  color: var(--brown); white-space: nowrap;
+}
+.receipt-tip-total-krw {
+  width: 100%;
+  text-align: right;
+  color: var(--green);
+  font-size: .74rem;
+  white-space: nowrap;
 }
 
 /* ── 푸터 ── */

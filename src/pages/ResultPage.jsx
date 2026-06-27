@@ -265,13 +265,15 @@ export default function ResultPage({
   onAddMenu,
   onTranslateImage,
   translatingImage,
+  translateImageError,
   cardFee = 0,
   authToken,
   guestId,
   aiUsage,
   onAiUsageChange,
+  initialCart,
 }) {
-  const [cart,       setCart]     = useState({})
+  const [cart,       setCart]     = useState(() => initialCart || {})
   const [usdRates,   setUsdRates] = useState({})
   const [chatOpen,   setChatOpen] = useState(false)
   const [activeCat,  setActiveCat] = useState('all')
@@ -401,15 +403,12 @@ export default function ResultPage({
 
       <div className="result-header">
         <button className="result-back-btn" onClick={onBack}>←</button>
-        <span className="result-title">메뉴 분석</span>
+        <span className="result-title centered">메뉴판</span>
         <button
           className={`result-ai-btn ${chatOpen ? 'active' : ''}`}
           onClick={() => setChatOpen(v => !v)}
           aria-label="AI에게 물어보기"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{flexShrink:0}}>
-            <path d="M12 1l2.5 7.5H22l-6.5 4.7 2.5 7.5L12 16l-6 4.7 2.5-7.5L2 8.5h7.5z"/>
-          </svg>
           AI 질문
         </button>
       </div>
@@ -417,14 +416,14 @@ export default function ResultPage({
       {/* 감지 배너 */}
       <div className="result-detect-bar">
         <span className="result-detect-badge">{flag} {detected} · {currency}</span>
-        <div className="result-detect-actions">
-          <button className="result-add-menu-inline secondary" onClick={showMenuImage}>
-            메뉴판 보기
-          </button>
-          <button className="result-add-menu-inline" onClick={() => setAddMenuChoiceOpen(true)}>
-            메뉴 추가하기
-          </button>
-        </div>
+      </div>
+      <div className="result-detect-actions">
+        <button className="result-detect-action-btn" onClick={showMenuImage}>
+          메뉴판 보기
+        </button>
+        <button className="result-detect-action-btn" onClick={() => setAddMenuChoiceOpen(true)}>
+          메뉴 추가하기
+        </button>
       </div>
 
       {imageView && (
@@ -447,7 +446,7 @@ export default function ResultPage({
               />
             ) : (
               <div className="menu-image-loading">
-                <span>{priceResult?.translatedImageMessage || '번역 이미지를 만들지 못했습니다.'}</span>
+                <span>{translateImageError || priceResult?.translatedImageMessage || '번역 이미지를 만들지 못했습니다.'}</span>
               </div>
             )}
           </div>

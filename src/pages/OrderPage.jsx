@@ -165,7 +165,7 @@ export default function OrderPage({ priceResult, cart, onBack, onReset, cardFee 
 
       {/* 헤더 */}
       <div className="order-header">
-        <button className="result-back-btn" onClick={onBack}>←</button>
+        {onBack ? <button className="result-back-btn" onClick={onBack}>←</button> : <div style={{width:34}} />}
         <span className="result-title">{isReceipt ? '영수증 저장' : '주문서'}</span>
         <div style={{width:34}} />
       </div>
@@ -219,19 +219,6 @@ export default function OrderPage({ priceResult, cart, onBack, onReset, cardFee 
             <span>현지 금액</span>
             <span>{fmtOrig(totalOrig, currency || 'USD')}</span>
           </div>
-          {tipGuide && (
-            <div className="receipt-tip-box">
-              <div className="receipt-tip-top">
-                <span>{tipGuide.label}</span>
-                <strong>{fmtPercent(tipGuide.min)} ~ {fmtPercent(tipGuide.max)}</strong>
-              </div>
-              <div className="receipt-tip-amount">
-                {fmtOrigRange(tipOrigMin, tipOrigMax, currency || 'USD')}
-                <span>{fmtKrwRange(tipKrwMin, tipKrwMax)}</span>
-              </div>
-              <div className="receipt-tip-note">{tipGuide.note}</div>
-            </div>
-          )}
           {cardFee > 0 && (
             <div className="receipt-total-line">
               <span>수수료 전 환산</span>
@@ -248,6 +235,24 @@ export default function OrderPage({ priceResult, cart, onBack, onReset, cardFee 
             <span>원화{cardFee > 0 ? ' (수수료 포함)' : ''}</span>
             <span>{fmtKrw(totalKrw)}</span>
           </div>
+          {tipGuide && (
+            <div className="receipt-tip-box">
+              <div className="receipt-tip-top">
+                <span>{tipGuide.label}</span>
+                <strong>{fmtPercent(tipGuide.min)} ~ {fmtPercent(tipGuide.max)}</strong>
+              </div>
+              <div className="receipt-tip-amount">
+                {fmtOrigRange(tipOrigMin, tipOrigMax, currency || 'USD')}
+                <span>{fmtKrwRange(tipKrwMin, tipKrwMax)}</span>
+              </div>
+              <div className="receipt-tip-note">{tipGuide.note}</div>
+              <div className="receipt-tip-total">
+                <span>팁 포함 예상 금액</span>
+                <strong>{fmtOrigRange(totalOrig + tipOrigMin, totalOrig + tipOrigMax, currency || 'USD')}</strong>
+                <span className="receipt-tip-total-krw">{fmtKrwRange(totalKrw + tipKrwMin, totalKrw + tipKrwMax)}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="receipt-dash-line" />
@@ -273,7 +278,7 @@ export default function OrderPage({ priceResult, cart, onBack, onReset, cardFee 
 
       {/* 버튼 */}
       <div className="order-actions">
-        <button className="result-action-btn" onClick={onReset}>처음으로</button>
+        <button className="result-action-btn" onClick={onReset}>{isReceipt ? '처음으로' : '주문 수정'}</button>
         <button className="result-action-btn order-now-btn" onClick={() => setOrderMode(v => !v)}>
           주문하기
         </button>
